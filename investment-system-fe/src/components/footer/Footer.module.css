@@ -1,0 +1,45 @@
+@reference "../../index.css";
+
+.footerWrapper {
+  @apply bg-[#F9FAFB] pt-16 pb-8 px-8 border-t border-gray-200;
+}
+
+.footerGrid {
+  @apply max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-12;
+}
+
+.brandColumn {
+  @apply flex flex-col gap-4;
+}
+
+.brandDescription {
+  @apply text-gray-500 text-sm leading-relaxed max-w-[250px];
+}
+
+.socialLinks {
+  @apply flex items-center gap-5 mt-4;
+}
+
+.socialIcon {
+  @apply text-gray-400 hover:text-[#E9C46A] transition-colors duration-200 cursor-pointer;
+}
+
+.columnTitle {
+  @apply font-bold text-gray-800 mb-6;
+}
+
+.linkList {
+  @apply flex flex-col gap-3;
+}
+
+.footerLink {
+  @apply text-gray-500 text-sm hover:text-gray-900 transition-colors duration-200 cursor-pointer;
+}
+
+.copyrightSection {
+  @apply pt-8 border-t border-gray-200 text-center;
+}
+
+.copyrightText {
+  @apply text-gray-400 text-sm;
+}
