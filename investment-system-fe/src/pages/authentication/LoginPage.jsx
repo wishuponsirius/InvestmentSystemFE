@@ -55,7 +55,7 @@ const LoginPage = () => {
               <label className={styles.inputLabel}>Email</label>
               <input
                 type="email"
-                placeholder="admin@goldinsight.com"
+                placeholder="Enter your email"
                 className={styles.inputField}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -67,7 +67,7 @@ const LoginPage = () => {
               <label className={styles.inputLabel}>Password</label>
               <input
                 type="password"
-                placeholder="admin"
+                placeholder="Enter your password"
                 className={styles.inputField}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
