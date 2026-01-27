@@ -1,0 +1,96 @@
+@reference "../../index.css";
+
+/* Lớp bọc ngoài cùng: quản lý màu nền toàn trang */
+.pageWrapper {
+  @apply min-h-screen w-full bg-[#FAFAFA] flex flex-col;
+}
+
+/* Khung chứa nội dung: CHÌA KHÓA để khớp lề với Header/Footer */
+.dashboardContainer {
+  /* max-w-7xl (1280px) là chuẩn chung cho Header/Footer của bro */
+  @apply w-full max-w-7xl mx-auto px-6 py-10 flex-grow;
+}
+
+/* Tab Navigation */
+.tabContainer {
+  @apply flex gap-8 border-b border-gray-200 mb-8;
+}
+.tabBtn {
+  @apply pb-2 px-2 text-sm font-bold text-gray-400 border-b-2 border-transparent transition-all;
+}
+.activeTab {
+  @apply text-black border-yellow-500;
+}
+
+/* Stats Cards */
+.statsGrid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-6 mb-10;
+}
+.statCard {
+  @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100;
+}
+.cardLabel {
+  @apply text-xs font-bold text-gray-400 uppercase tracking-wider;
+}
+.mainPrice {
+  @apply text-2xl font-bold my-2;
+}
+.mainPrice small {
+  @apply text-sm font-normal text-gray-400;
+}
+.trendDown {
+  @apply text-red-500 text-xs font-medium;
+}
+.trendUp {
+  @apply text-green-500 text-xs font-medium;
+}
+.badgeHighRisk {
+  @apply bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold;
+}
+.riskDesc {
+  @apply text-xs text-red-400 mt-2;
+}
+
+/* Sections & Tables */
+.sectionContainer {
+  @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8;
+}
+.sectionTitle {
+  @apply text-lg font-bold mb-6 text-gray-800;
+}
+.chartPlaceholder {
+  @apply w-full h-64 bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200;
+}
+.tableWrapper {
+  @apply overflow-x-auto;
+}
+.table {
+  @apply w-full text-left border-collapse;
+}
+.table th {
+  @apply pb-4 text-sm font-bold text-gray-400;
+}
+.table td {
+  @apply py-4 border-t border-gray-50 text-sm text-gray-700;
+}
+
+.bestTagBuy {
+  @apply ml-2 bg-green-100 text-green-600 text-[10px] px-2 py-1 rounded-full font-bold;
+}
+.bestTagSell {
+  @apply ml-2 bg-yellow-100 text-yellow-600 text-[10px] px-2 py-1 rounded-full font-bold;
+}
+
+/* CTA Box */
+.ctaBox {
+  @apply text-center py-16 bg-[#FFF9EB] rounded-3xl mt-12 px-4 w-full;
+}
+.ctaTitle {
+  @apply text-2xl font-bold text-[#84632B] mb-4;
+}
+.ctaDesc {
+  @apply text-gray-600 max-w-2xl mx-auto mb-8;
+}
+.ctaBtn {
+  @apply bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full shadow-md transition-all active:scale-95;
+}
