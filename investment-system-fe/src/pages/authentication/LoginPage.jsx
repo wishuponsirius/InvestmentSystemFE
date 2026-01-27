@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"; // Hook để chuyển trang
 import styles from "./LoginPage.module.css";
 import { FaFacebook, FaTwitter } from "react-icons/fa";
 import goldImage from "../../assets/image/gold-coin.png";
-import { MOCK_USERS } from "../../mockup/mockUser"; 
+import { MOCK_USERS } from "../../mockup/mockUser";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -22,6 +22,8 @@ const LoginPage = () => {
     if (user) {
       if (user.role === "admin") {
         navigate("/admin-dashboard"); // Chuyển sang Admin nếu đúng role
+      } else if (user.role === "investor") {
+        navigate("/investor-dashboard");
       } else {
         alert("Chào Investor! Trang của bạn đang được xây dựng.");
       }
