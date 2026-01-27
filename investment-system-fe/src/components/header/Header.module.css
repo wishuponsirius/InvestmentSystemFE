@@ -12,24 +12,34 @@
 
 .logoText {
   @apply font-bold text-xl;
-  color: #FFDA91; /* Màu vàng GoldInsight */
+  color: #ffda91; /* Màu vàng GoldInsight */
+}
+.loginBtn {
+  @apply bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-full text-sm transition-all active:scale-95;
 }
 
+.navItem {
+  @apply cursor-pointer hover:text-yellow-600 transition-colors;
+}
+
+.activeNavItem {
+  @apply text-black font-bold border-b-2 border-yellow-500;
+}
 .navLinks {
   @apply flex items-center gap-10;
 }
 
 .navItem {
   @apply text-sm font-medium transition-colors duration-200 cursor-pointer;
-  color: #A0AEC0; /* Màu xám nhạt cho text không active */
+  color: #a0aec0; /* Màu xám nhạt cho text không active */
 }
 
 .navItem:hover {
-  color: #2D3748;
+  color: #2d3748;
 }
 
 .activeNavItem {
-  color: #1A202C !important;
+  color: #1a202c !important;
   @apply font-bold;
 }
 
@@ -43,5 +53,5 @@
 
 .statusDot {
   @apply absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white;
-  background-color: #48BB78; /* Màu xanh lá online */
+  background-color: #48bb78; /* Màu xanh lá online */
 }
