@@ -1,12 +1,26 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "./Header.module.css";
 
 const Header = ({ role = "GUEST" }) => {
   const navigate = useNavigate();
-  const location = useLocation(); // Dùng để check xem trang nào đang active
+  const location = useLocation();
 
-  // Cấu hình menu cho từng Role
+  // State quản lý việc mở/đóng dropdown
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const menuConfig = {
     GUEST: [
       { name: "Market Data", path: "/guest-dashboard" },
@@ -27,6 +41,18 @@ const Header = ({ role = "GUEST" }) => {
 
   const currentMenu = menuConfig[role] || menuConfig.GUEST;
 
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+    // Xử lý logic xóa token/auth ở đây
+    navigate("/login");
+  };
+
+  const handleProfileSettings = () => {
+    setIsDropdownOpen(false);
+    // Điều hướng tới trang settings tùy theo role
+    navigate("/system-settings");
+  };
+
   return (
     <header className={styles.headerContainer}>
       {/* Group Left: Logo + Navigation */}
@@ -43,7 +69,7 @@ const Header = ({ role = "GUEST" }) => {
           <span className={styles.logoText}>GoldInsight</span>
         </div>
 
-        {/* Navigation - Thay đổi linh hoạt theo Role */}
+        {/* Navigation */}
         <nav className={styles.navLinks}>
           {currentMenu.map((item, index) => (
             <span
@@ -69,13 +95,35 @@ const Header = ({ role = "GUEST" }) => {
             Login
           </button>
         ) : (
-          <div className={styles.userProfile}>
+          <div
+            className={styles.userProfile}
+            ref={dropdownRef}
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
             <img
               src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
               alt="User Avatar"
               className={styles.avatar}
             />
             <span className={styles.statusDot} title="Online"></span>
+
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className={styles.dropdownMenu}>
+                <div
+                  className={styles.dropdownItem}
+                  onClick={handleProfileSettings}
+                >
+                  Profile Settings
+                </div>
+                <div
+                  className={`${styles.dropdownItem} ${styles.dropdownItemLogout}`}
+                  onClick={handleLogout}
+                >
+                  Log out
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
