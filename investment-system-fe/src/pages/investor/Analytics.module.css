@@ -1,0 +1,72 @@
+@reference "../../index.css";
+
+.pageWrapper {
+  @apply min-h-screen w-full bg-[#FAFAFA] flex flex-col;
+}
+
+.container {
+  @apply w-full max-w-7xl mx-auto px-6 py-10 flex-grow;
+}
+
+.pageTitle {
+  @apply text-xl font-bold text-gray-800 mb-10 text-center;
+}
+
+/* ===== Sections ===== */
+.section {
+  @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-10;
+}
+
+.sectionTitle {
+  @apply text-base font-bold text-gray-800 mb-6;
+}
+
+.chartBox {
+  @apply w-full h-64 bg-gray-50 rounded-lg border border-dashed border-gray-200
+         flex items-center justify-center;
+}
+
+.chartPlaceholder {
+  @apply text-sm text-gray-400 italic;
+}
+
+/* ===== Grid ===== */
+.gridTwoCols {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-8 mb-10;
+}
+
+/* ===== Simulation ===== */
+.simulationGrid {
+  @apply grid grid-cols-1 md:grid-cols-4 gap-6 mb-8;
+}
+
+.formGroup {
+  @apply flex flex-col gap-2;
+}
+
+.formGroup label {
+  @apply text-sm text-gray-500 font-medium;
+}
+
+.formGroup input,
+.formGroup select {
+  @apply px-4 py-2 border border-gray-200 rounded-lg text-sm;
+}
+
+.runBtn {
+  @apply bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-lg
+         transition-all active:scale-95 mt-6 md:mt-0;
+}
+
+.simulationResult {
+  @apply bg-[#FFF9EB] rounded-xl p-6 text-center;
+}
+
+.simulationResult p {
+  @apply text-sm text-gray-600 mb-2;
+}
+
+.profit {
+  @apply text-2xl font-bold text-green-600;
+}
+

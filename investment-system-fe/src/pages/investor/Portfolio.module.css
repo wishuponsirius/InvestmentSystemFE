@@ -1,0 +1,88 @@
+@reference "../../index.css";
+
+.pageWrapper {
+  @apply min-h-screen w-full bg-[#FAFAFA] flex flex-col;
+}
+
+.container {
+  @apply w-full max-w-7xl mx-auto px-6 py-10 flex-grow;
+}
+
+.pageTitle {
+  @apply text-xl font-bold text-gray-800 mb-8;
+}
+
+/* ===== Summary ===== */
+.summaryGrid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6 mb-12;
+}
+
+.summaryCard {
+  @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100;
+}
+
+.label {
+  @apply text-xs font-bold text-gray-400 uppercase tracking-wider;
+}
+
+.value {
+  @apply text-2xl font-bold mt-2;
+}
+
+.subValue {
+  @apply text-sm text-green-600 font-medium;
+}
+
+.positive {
+  @apply text-green-600;
+}
+
+/* ===== Section ===== */
+.section {
+  @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100;
+}
+
+.sectionHeader {
+  @apply flex items-center justify-between mb-6;
+}
+
+.sectionTitle {
+  @apply text-lg font-bold text-gray-800;
+}
+
+.addBtn {
+  @apply text-sm font-bold px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition;
+}
+
+/* ===== Holdings ===== */
+.holdingsList {
+  @apply flex flex-col gap-4;
+}
+
+.holdingCard {
+  @apply flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-5 rounded-xl border border-gray-100 hover:shadow-sm transition;
+}
+
+.assetName {
+  @apply font-bold text-gray-800;
+}
+
+.assetType {
+  @apply text-sm text-gray-400;
+}
+
+.assetStats {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-6 text-sm;
+}
+
+.statLabel {
+  @apply text-gray-400 text-xs uppercase;
+}
+
+.pnlPositive {
+  @apply text-green-600 font-bold;
+}
+
+.pnlNegative {
+  @apply text-red-500 font-bold;
+}
