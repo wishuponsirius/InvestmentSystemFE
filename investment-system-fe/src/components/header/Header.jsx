@@ -50,7 +50,7 @@ const Header = ({ role = "GUEST" }) => {
   const handleProfileSettings = () => {
     setIsDropdownOpen(false);
     // Điều hướng tới trang settings tùy theo role
-    navigate("/system-settings");
+    navigate("/user-profile");
   };
 
   return (
