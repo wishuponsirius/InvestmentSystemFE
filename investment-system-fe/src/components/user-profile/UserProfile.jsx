@@ -199,14 +199,14 @@ const UserProfile = () => {
         <label className={styles.label}>Old password</label>
         <div className={styles.inputWrapper}>
           <Lock className={styles.inputIcon} size={18} />
-          <input
-            type="password"
-            placeholder="Password"
-            className={`${styles.input} ${styles.inputGray}`}
-            value={passwords.old}
-            onChange={(e) => setPasswords({ ...passwords, old: e.target.value })}
-            required
-          />
+            <input
+              type="password"
+              placeholder="Password"
+              className={`${styles.input} ${styles.inputGray}`}
+              value={passwords.old}
+              onChange={(e) => setPasswords({ ...passwords, old: e.target.value })}
+              required
+            />
         </div>
       </div>
 
@@ -214,14 +214,14 @@ const UserProfile = () => {
         <label className={styles.label}>New password</label>
         <div className={styles.inputWrapper}>
           <Lock className={styles.inputIcon} size={18} />
-          <input
-            type="password"
-            placeholder="New password"
-            className={`${styles.input} ${styles.inputGray}`}
-            value={passwords.new}
-            onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-            required
-          />
+            <input
+              type="password"
+              placeholder="New password"
+              className={`${styles.input} ${styles.inputGray}`}
+              value={passwords.new}
+              onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+              required
+            />
         </div>
         <p className={styles.hintText}>Minimum 8 characters</p>
       </div>
@@ -230,26 +230,26 @@ const UserProfile = () => {
         <label className={styles.label}>Confirm new password</label>
         <div className={styles.inputWrapper}>
           <Lock className={styles.inputIcon} size={18} />
-          <input
-            type="password"
-            placeholder="Confirm new password"
-            className={`${styles.input} ${styles.inputGray}`}
-            value={passwords.confirm}
-            onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-            required
-          />
+            <input
+              type="password"
+              placeholder="Confirm new password"
+              className={`${styles.input} ${styles.inputGray}`}
+              value={passwords.confirm}
+              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+              required
+            />
+          </div>
+          <p className={styles.hintText}>Minimum 8 characters</p>
         </div>
-        <p className={styles.hintText}>Minimum 8 characters</p>
-      </div>
 
-      <button 
-        type="submit" 
-        className={styles.submitBtn}
-        disabled={loading}
-      >
-        {loading ? "Changing..." : "Change password"}
-      </button>
-    </form>
+        <button 
+          type="submit" 
+          className={styles.submitBtn}
+          disabled={loading}
+        >
+          {loading ? "Changing..." : "Change password"}
+        </button>
+      </form>
   );
 
   return (
