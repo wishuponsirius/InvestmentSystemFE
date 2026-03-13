@@ -9,7 +9,25 @@ const backendApi = axios.create({
 
 const getBackendHeaders = () => {
   const accessToken = localStorage.getItem("accessToken");
-  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+  const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+  
+  // Trích xuất email từ token để gửi header X-User-Email (Yêu cầu của IAM Backend)
+  if (accessToken) {
+    try {
+      const parts = accessToken.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        const email = payload.sub || payload.email || payload.contactEmail;
+        if (email) {
+          headers["X-User-Email"] = email;
+        }
+      }
+    } catch (e) {
+      console.error("Error decoding token for X-User-Email:", e);
+    }
+  }
+  
+  return headers;
 };
 
 /**
@@ -18,6 +36,7 @@ const getBackendHeaders = () => {
  */
 export const getUserProfile = async () => {
   const headers = getBackendHeaders();
+  // Endpoint đúng trong AccountController.java là GET /me (RequestMapping("/me") và GetMapping không path)
   const response = await backendApi.get("/me", { headers });
   return response.data;
 };
@@ -44,10 +63,7 @@ export const changePassword = async (currentPassword, newPassword) => {
  * @returns {Promise<any>}
  */
 export const uploadAvatar = async (file) => {
-  const headers = {
-    ...getBackendHeaders(),
-    "Content-Type": "multipart/form-data",
-  };
+  const headers = getBackendHeaders();
   
   const formData = new FormData();
   formData.append("file", file);
