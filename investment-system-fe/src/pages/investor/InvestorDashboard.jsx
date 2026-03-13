@@ -44,7 +44,7 @@ const InvestorDashboard = () => {
   return (
     <div className={styles.pageWrapper}>
       {/* 1. Header luôn trải dài nhưng nội dung bên trong sẽ được căn giữa */}
-      <Header role="INVESTOR" />
+      <Header role="INSTITUTION" />
 
       {/* 2. Phần nội dung chính */}
       <main className={styles.dashboardContainer}>
