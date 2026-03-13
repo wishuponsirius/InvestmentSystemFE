@@ -15,11 +15,98 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import styles from "./UserProfile.module.css";
+import * as userService from "../../services/userService";
 
 const UserProfile = () => {
   const navigate = useNavigate();
   // State quản lý tab đang mở (Mặc định là Edit profile)
   const [activeTab, setActiveTab] = useState("Edit profile");
+
+  // State cho thông tin người dùng
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState({ type: "", text: "" });
+
+  // State cho đổi mật khẩu
+  const [passwords, setPasswords] = useState({
+    old: "",
+    new: "",
+    confirm: "",
+  });
+
+  // Fetch user profile on mount
+  React.useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const resp = await userService.getUserProfile();
+      if (resp.success) {
+        setUser(resp.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+    }
+  };
+
+  const showMessage = (type, text) => {
+    setMsg({ type, text });
+    setTimeout(() => setMsg({ type: "", text: "" }), 5000);
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (passwords.new !== passwords.confirm) {
+      showMessage("error", "New passwords do not match!");
+      return;
+    }
+    if (passwords.new.length < 8) {
+      showMessage("error", "New password must be at least 8 characters!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await userService.changePassword(passwords.old, passwords.new);
+      if (resp.success) {
+        showMessage("success", "Password changed successfully!");
+        setPasswords({ old: "", new: "", confirm: "" });
+      } else {
+        showMessage("error", resp.message || "Failed to change password.");
+      }
+    } catch (err) {
+      showMessage("error", err.response?.data?.message || "An error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size (e.g., 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showMessage("error", "File size must be less than 5MB");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await userService.uploadAvatar(file);
+      if (resp.success) {
+        showMessage("success", "Avatar updated successfully!");
+        setUser(resp.data); // Update user profile with new avatarUrl
+      } else {
+        showMessage("error", resp.message || "Failed to upload avatar.");
+      }
+    } catch (err) {
+      showMessage("error", err.response?.data?.message || "An error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const sidebarTabs = [
     { name: "Edit profile", icon: User },
@@ -39,10 +126,22 @@ const UserProfile = () => {
         <label className={styles.label}>Avatar</label>
         <div className={styles.avatarSection}>
           <div className={styles.avatarCircle}>
-            <img src="https://i.pravatar.cc/150?img=11" alt="User Avatar" />
+            <img 
+              src={user?.avatarUrl || "https://i.pravatar.cc/150?img=11"} 
+              alt="User Avatar" 
+            />
           </div>
           <div className={styles.avatarActions}>
-            <button className={styles.uploadBtn}>Upload new image</button>
+            <label className={styles.uploadBtn} style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? "Uploading..." : "Upload new image"}
+              <input 
+                type="file" 
+                hidden 
+                accept="image/*" 
+                onChange={handleAvatarUpload}
+                disabled={loading}
+              />
+            </label>
             <p className={styles.helperText}>
               At least 800×800 px recommended.<br />
               JPG or PNG and GIF is allowed
@@ -95,7 +194,7 @@ const UserProfile = () => {
 
   // Hàm render giao diện Password
   const renderPassword = () => (
-    <div className={styles.formContainer}>
+    <form className={styles.formContainer} onSubmit={handlePasswordChange}>
       <div className={styles.formGroup}>
         <label className={styles.label}>Old password</label>
         <div className={styles.inputWrapper}>
@@ -104,6 +203,9 @@ const UserProfile = () => {
             type="password"
             placeholder="Password"
             className={`${styles.input} ${styles.inputGray}`}
+            value={passwords.old}
+            onChange={(e) => setPasswords({ ...passwords, old: e.target.value })}
+            required
           />
         </div>
       </div>
@@ -116,6 +218,9 @@ const UserProfile = () => {
             type="password"
             placeholder="New password"
             className={`${styles.input} ${styles.inputGray}`}
+            value={passwords.new}
+            onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+            required
           />
         </div>
         <p className={styles.hintText}>Minimum 8 characters</p>
@@ -129,13 +234,22 @@ const UserProfile = () => {
             type="password"
             placeholder="Confirm new password"
             className={`${styles.input} ${styles.inputGray}`}
+            value={passwords.confirm}
+            onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+            required
           />
         </div>
         <p className={styles.hintText}>Minimum 8 characters</p>
       </div>
 
-      <button className={styles.submitBtn}>Change password</button>
-    </div>
+      <button 
+        type="submit" 
+        className={styles.submitBtn}
+        disabled={loading}
+      >
+        {loading ? "Changing..." : "Change password"}
+      </button>
+    </form>
   );
 
   return (
@@ -178,6 +292,13 @@ const UserProfile = () => {
         <section className={styles.contentArea}>
           {/* Tiêu đề thay đổi động theo tab */}
           <h1 className={styles.pageTitle}>{activeTab}</h1>
+
+          {/* Alert Message */}
+          {msg.text && (
+            <div className={`${styles.alert} ${msg.type === "success" ? styles.alertSuccess : styles.alertError}`}>
+              {msg.text}
+            </div>
+          )}
 
           {/* Dùng điều kiện để render form tương ứng */}
           {activeTab === "Edit profile" && renderEditProfile()}
