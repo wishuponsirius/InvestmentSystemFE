@@ -31,6 +31,7 @@
   font-weight: 500;
   color: #444;
   margin-bottom: 30px;
+  font-weight: bold;
 }
 
 /* Overview Cards */
@@ -49,7 +50,7 @@
 
 .cardLabel {
   display: block;
-  color: #999;
+  color: #222;
   font-size: 14px;
   margin-bottom: 10px;
 }
@@ -57,7 +58,7 @@
 .cardValue {
   font-size: 22px;
   font-weight: 600;
-  color: #bcbcbc;
+  color: #222;
 }
 
 /* Toolbar & Search Bar */
@@ -264,7 +265,7 @@ input:checked + .slider:before {
 .actionBtn {
   background: none;
   border: none;
-  color: #ffedcc;
+  color: #ffb84d;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -300,8 +301,262 @@ input:checked + .slider:before {
 }
 
 .activePage {
-  border-color: #ffb84d;
-  background-color: #ffedcc;
-  color: #333;
+  border-color: #ffda91;
+  background-color: #ffda91;
+  color: white;
   font-weight: bold;
+}
+
+/* Bao bọc ô search để chứa dropdown absolute */
+.searchGroupWrapper {
+  position: relative;
+  flex: 0 0 280px;
+}
+
+/* Form Search chính */
+.searchGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: white; /* Đảm bảo ô input có nền chuẩn */
+}
+
+/* Khung Dropdown Gợi Ý */
+.suggestionBox {
+  position: absolute;
+  top: 130%; /* Nằm ngay dưới thanh search */
+  left: 0;
+  width: 100%;
+  background-color: white;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  max-height: 250px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Từng item trong dropdown */
+.suggestionItem {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background-color 0.2s;
+}
+
+.suggestionItem:last-child {
+  border-bottom: none;
+}
+
+.suggestionItem:hover {
+  background-color: #fcf8f0; /* Màu cam nhạt tông xuyệt tông */
+}
+
+.sugName {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.sugEmail {
+  font-size: 12px;
+  color: #888;
+}
+
+/* Trạng thái Loading hoặc Trống */
+.suggestionState {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Hiệu ứng xoay cho icon Loading */
+.spinIcon {
+  animation: spin 1s linear infinite;
+  color: #ffb84d;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   MODAL CREATE USER STYLES
+   ========================================= */
+
+/* Nền đen mờ phủ toàn màn hình */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px); /* Làm mờ cảnh nền */
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Khung trắng chứa form */
+.modalContent {
+  background: white;
+  width: 100%;
+  max-width: 450px;
+  border-radius: 16px;
+  padding: 24px 32px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  animation: slideUp 0.3s ease-out;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #222;
+  margin: 0;
+}
+
+.closeModalBtn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.closeModalBtn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modalFormGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modalFormGroup label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #444;
+}
+
+.modalFormGroup input,
+.modalFormGroup select {
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  outline: none;
+  transition: border-color 0.2s;
+  background-color: #fcfcfc;
+}
+
+.modalFormGroup input:focus,
+.modalFormGroup select:focus {
+  border-color: #ffb84d;
+  background-color: #fff;
+}
+
+.modalError {
+  color: #d93025;
+  font-size: 13px;
+  background-color: #fce8e6;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.modalCancelBtn {
+  padding: 10px 20px;
+  border: 1px solid #ddd;
+  background-color: white;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.modalCancelBtn:hover {
+  background-color: #f5f5f5;
+}
+
+.modalSubmitBtn {
+  padding: 10px 24px;
+  border: none;
+  background-color: #ffb84d;
+  border-radius: 8px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.modalSubmitBtn:hover {
+  background-color: #e5a03c;
+}
+
+.modalSubmitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
