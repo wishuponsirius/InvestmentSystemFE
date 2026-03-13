@@ -35,6 +35,15 @@ const LoginPage = () => {
         localStorage.setItem("refreshToken", payload.refreshToken);
       }
 
+      const userId =
+        payload.userId ||
+        payload.user?.id ||
+        payload.id ||
+        "";
+      if (userId) {
+        localStorage.setItem("userId", String(userId));
+      }
+
       // Xử lý chuyển trang dựa trên Role
       // Không mặc định thành 'admin' nếu backend không trả role.
       let userRole = payload.role;
