@@ -6,6 +6,12 @@ const Header = ({ role = "GUEST" }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Normalize incoming role: accept lower/upper case and synonyms
+  const incomingRole = role || "GUEST";
+  const roleUpper = String(incomingRole).toUpperCase();
+  // Map synonyms: treat INVESTOR same as INSTITUTION
+  const mappedRole = roleUpper === "INVESTOR" ? "INSTITUTION" : roleUpper;
+
   // State quản lý việc mở/đóng dropdown
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -26,7 +32,7 @@ const Header = ({ role = "GUEST" }) => {
       { name: "Market Data", path: "/guest-dashboard" },
       { name: "About Us", path: "/about" },
     ],
-    INVESTOR: [
+    INSTITUTION: [
       { name: "Market Data", path: "/investor-dashboard" },
       { name: "Portfolio", path: "/portfolio" },
       { name: "Analytics", path: "/analytics" },
@@ -39,17 +45,22 @@ const Header = ({ role = "GUEST" }) => {
     ],
   };
 
-  const currentMenu = menuConfig[role] || menuConfig.GUEST;
+  const currentMenu = menuConfig[mappedRole] || menuConfig.GUEST;
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
-    // Xử lý logic xóa token/auth ở đây
+
+    // Xóa toàn bộ token khỏi localStorage để thực sự đăng xuất
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+
+    // Đẩy người dùng về trang đăng nhập
     navigate("/login");
   };
 
   const handleProfileSettings = () => {
     setIsDropdownOpen(false);
-    // Điều hướng tới trang settings tùy theo role
+    // Điều hướng tới trang User Profile mà chúng ta vừa tạo
     navigate("/user-profile");
   };
 
@@ -87,7 +98,7 @@ const Header = ({ role = "GUEST" }) => {
 
       {/* Right Section: User Profile hoặc Login Button */}
       <div className="flex items-center gap-4">
-        {role === "GUEST" ? (
+        {mappedRole === "GUEST" ? (
           <button
             className={styles.loginBtn}
             onClick={() => navigate("/login")}
