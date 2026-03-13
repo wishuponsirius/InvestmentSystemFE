@@ -18,7 +18,7 @@ const getBackendHeaders = () => {
  */
 export const getUserProfile = async () => {
   const headers = getBackendHeaders();
-  const response = await backendApi.get("/iam/me", { headers });
+  const response = await backendApi.get("/me", { headers });
   return response.data;
 };
 
@@ -31,7 +31,7 @@ export const getUserProfile = async () => {
 export const changePassword = async (currentPassword, newPassword) => {
   const headers = getBackendHeaders();
   const response = await backendApi.patch(
-    "/iam/me/password",
+    "/me/password",
     { currentPassword, newPassword },
     { headers }
   );
@@ -53,7 +53,7 @@ export const uploadAvatar = async (file) => {
   formData.append("file", file);
 
   const response = await backendApi.patch(
-    "/iam/me/avatar",
+    "/me/avatar",
     formData,
     { headers }
   );
