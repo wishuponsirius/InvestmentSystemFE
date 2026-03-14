@@ -299,3 +299,25 @@
   padding: 20px 0;
   font-style: italic;
 }
+
+/* Alert Notification */
+.alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.alertSuccess {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.alertError {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}

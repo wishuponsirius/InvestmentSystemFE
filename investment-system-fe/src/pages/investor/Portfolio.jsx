@@ -2,113 +2,338 @@ import React from "react";
 import Header from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
 import styles from "./Portfolio.module.css";
+import {
+  convertMoney,
+  deletePortfolioAsset,
+  displayAssets,
+  displayCurrencies,
+  displayUnits,
+  fetchPortfolioData,
+  formatMoney,
+  savePortfolioAsset,
+} from "../../services/portfolioService";
 
 const Portfolio = () => {
-  const holdings = [
-    {
-      name: "SJC Gold Bar",
-      type: "1 oz",
-      quantity: "5.00 oz",
-      avgCost: "$1850.00",
-      marketValue: "$2050.00",
-      pnl: "+$1000.00",
-      positive: true,
-    },
-    {
-      name: "PNJ Silver Bar",
-      type: "100 g",
-      quantity: "1000.00 oz",
-      avgCost: "$25.00",
-      marketValue: "$28.00",
-      pnl: "+$3000.00",
-      positive: true,
-    },
-    {
-      name: "ABC Platinum Coin",
-      type: "0.5 oz",
-      quantity: "2.00 oz",
-      avgCost: "$950.00",
-      marketValue: "$900.00",
-      pnl: "-$100.00",
-      positive: false,
-    },
-    {
-      name: "XYZ Gold Nugget",
-      type: "Raw Form",
-      quantity: "0.75 oz",
-      avgCost: "$1900.00",
-      marketValue: "$2100.00",
-      pnl: "+$150.00",
-      positive: true,
-    },
-  ];
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [displayCurrency, setDisplayCurrency] = React.useState("USD");
+  const [usdToVnd, setUsdToVnd] = React.useState(0);
+  const [userId, setUserId] = React.useState("");
+  const [holdings, setHoldings] = React.useState([]);
+  const [totalProfitLossPercentage, setTotalProfitLossPercentage] = React.useState(0);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [editingAsset, setEditingAsset] = React.useState(null);
+  const [form, setForm] = React.useState({
+    asset: "Gold",
+    quantity: "",
+    unitDisplay: "Luong",
+    entryPrice: "",
+    currency: "VND",
+  });
+
+  const loadPortfolio = React.useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const data = await fetchPortfolioData();
+      setUserId(data.userId || "");
+      setUsdToVnd(Number(data.usdToVnd || 0));
+      setHoldings(Array.isArray(data.holdings) ? data.holdings : []);
+      setTotalProfitLossPercentage(Number(data.totalProfitLossPercentage || 0));
+    } catch (e) {
+      setError(e?.response?.data?.message || e?.message || "Cannot load portfolio.");
+      setHoldings([]);
+      setTotalProfitLossPercentage(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadPortfolio();
+  }, [loadPortfolio]);
+
+  const openCreateForm = () => {
+    setEditingAsset(null);
+    setForm({
+      asset: "Gold",
+      quantity: "",
+      unitDisplay: "Luong",
+      entryPrice: "",
+      currency: "VND",
+    });
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (item) => {
+    setEditingAsset(item.asset);
+    setForm({
+      asset: item.asset,
+      quantity: String(item.quantity ?? ""),
+      unitDisplay: item.displayUnit || "Luong",
+      entryPrice: String(item.entryPrice ?? ""),
+      currency: item.currency || "VND",
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    const quantity = Number(form.quantity);
+    const entryPrice = Number(form.entryPrice);
+
+    if (!quantity || quantity <= 0 || !entryPrice || entryPrice <= 0) {
+      setError("Please enter valid quantity and price.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+    try {
+      await savePortfolioAsset({
+        userId,
+        asset: form.asset,
+        quantity,
+        unitDisplay: form.unitDisplay,
+        entryPrice,
+        currency: form.currency,
+      });
+      setIsFormOpen(false);
+      await loadPortfolio();
+    } catch (e) {
+      setError(e?.response?.data?.message || e?.message || "Failed to save asset.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (item) => {
+    if (!window.confirm(`Delete ${item.asset === "Gold" ? "SJC Gold" : "Phu Quy Silver"}?`)) return;
+
+    setError("");
+    try {
+      await deletePortfolioAsset({ userId, asset: item.asset });
+      await loadPortfolio();
+    } catch (e) {
+      setError(e?.response?.data?.message || e?.message || "Failed to delete asset.");
+    }
+  };
+
+  const toDisplayMoney = (amount, sourceCurrency) => {
+    const converted = convertMoney({
+      amount,
+      sourceCurrency,
+      targetCurrency: displayCurrency,
+      usdToVnd,
+    });
+    return formatMoney(converted, displayCurrency);
+  };
+
+  const convertedTotalProfitLoss = holdings.reduce(
+    (sum, h) =>
+      sum +
+      convertMoney({
+        amount: h.profitLoss,
+        sourceCurrency: h.currency,
+        targetCurrency: displayCurrency,
+        usdToVnd,
+      }),
+    0,
+  );
 
   return (
     <div className={styles.pageWrapper}>
       <Header role="INVESTOR" />
 
       <main className={styles.container}>
-        {/* ===== Summary ===== */}
         <h1 className={styles.pageTitle}>Portfolio Summary</h1>
 
-        <div className={styles.summaryGrid}>
-          <div className={styles.summaryCard}>
-            <span className={styles.label}>Total Wealth</span>
-            <h2 className={styles.value}>$250,000.00</h2>
-          </div>
-
-          <div className={styles.summaryCard}>
-            <span className={styles.label}>Total Profit / Loss</span>
-            <h2 className={`${styles.value} ${styles.positive}`}>
-              +$28,500.00
-            </h2>
-            <span className={styles.subValue}>+12.87%</span>
+        <div className={styles.toolbarRow}>
+          <button className={styles.refreshBtn} onClick={loadPortfolio} disabled={isLoading}>
+            Refresh
+          </button>
+          <div className={styles.currencyToggle}>
+            {displayCurrencies.map((code) => (
+              <button
+                key={code}
+                type="button"
+                className={`${styles.currencyBtn} ${displayCurrency === code ? styles.currencyBtnActive : ""}`}
+                onClick={() => setDisplayCurrency(code)}
+              >
+                {code}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* ===== Holdings ===== */}
+        {error && <p className={styles.errorText}>{error}</p>}
+
+        <div className={styles.summaryGrid}>
+          <div className={styles.summaryCard}>
+            <span className={styles.label}>Total Profit / Loss</span>
+            <h2 className={`${styles.value} ${convertedTotalProfitLoss >= 0 ? styles.positive : styles.negative}`}>
+              {convertedTotalProfitLoss >= 0 ? "+" : "-"}
+              {toDisplayMoney(Math.abs(convertedTotalProfitLoss), displayCurrency)}
+            </h2>
+            <span className={`${styles.subValue} ${totalProfitLossPercentage >= 0 ? styles.positive : styles.negative}`}>
+              {totalProfitLossPercentage >= 0 ? "+" : ""}
+              {totalProfitLossPercentage.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Your Holdings</h2>
-            <button className={styles.addBtn}>+ Record New Transaction</button>
+            <button className={styles.addBtn} onClick={openCreateForm}>
+              + Record New Transaction
+            </button>
           </div>
 
           <div className={styles.holdingsList}>
+            {!isLoading && holdings.length === 0 && <p className={styles.emptyText}>No holdings yet.</p>}
             {holdings.map((item, index) => (
-              <div key={index} className={styles.holdingCard}>
+              <div
+                key={item.portfolioId != null ? String(item.portfolioId) : `${item.asset}-${item.displayUnit}-${item.currency}-${index}`}
+                className={`${styles.holdingCard} ${item.asset === "Gold" ? styles.goldCard : styles.silverCard}`}
+              >
                 <div>
-                  <h3 className={styles.assetName}>{item.name}</h3>
-                  <span className={styles.assetType}>{item.type}</span>
+                  <h3 className={styles.assetName}>{item.displayName}</h3>
+                  <span className={styles.assetType}>{item.displayUnit}</span>
                 </div>
 
                 <div className={styles.assetStats}>
                   <div>
                     <span className={styles.statLabel}>Quantity</span>
-                    <p>{item.quantity}</p>
+                    <p>
+                      {Number(item.quantity || 0).toFixed(2)} {item.displayUnit}
+                    </p>
                   </div>
                   <div>
                     <span className={styles.statLabel}>Avg. Cost</span>
-                    <p>{item.avgCost}</p>
+                    <p>{toDisplayMoney(item.entryPrice, item.currency)}</p>
+                  </div>
+                  <div>
+                    <span className={styles.statLabel}>Buy</span>
+                    <p>{toDisplayMoney(item.buyPrice ?? item.entryPrice, item.currency)}</p>
+                  </div>
+                  <div>
+                    <span className={styles.statLabel}>Sell</span>
+                    <p>{toDisplayMoney(item.sellPrice ?? item.entryPrice, item.currency)}</p>
                   </div>
                   <div>
                     <span className={styles.statLabel}>Market Value</span>
-                    <p>{item.marketValue}</p>
+                    <p>{toDisplayMoney(item.marketValue, item.currency)}</p>
                   </div>
                   <div>
                     <span className={styles.statLabel}>Net Profit</span>
-                    <p
-                      className={
-                        item.positive ? styles.pnlPositive : styles.pnlNegative
-                      }
-                    >
-                      {item.pnl}
+                    <p className={item.profitLoss >= 0 ? styles.pnlPositive : styles.pnlNegative}>
+                      {item.profitLoss >= 0 ? "+" : "-"}
+                      {toDisplayMoney(Math.abs(item.profitLoss), item.currency)}
                     </p>
                   </div>
+                </div>
+
+                <div className={styles.actionRow}>
+                  <button className={styles.secondaryBtn} onClick={() => openEditForm(item)}>
+                    Edit
+                  </button>
+                  <button className={styles.dangerBtn} onClick={() => handleDelete(item)}>
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </section>
+
+        {isFormOpen && (
+          <div className={styles.modalOverlay}>
+            <form className={styles.modalCard} onSubmit={handleSave}>
+              <h3 className={styles.modalTitle}>{editingAsset != null ? "Edit Asset" : "Record Transaction"}</h3>
+
+              <label className={styles.formLabel}>Metal Type</label>
+              <select
+                className={styles.formInput}
+                value={form.asset}
+                onChange={(e) => setForm((prev) => ({ ...prev, asset: e.target.value }))}
+              >
+                {displayAssets.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+
+              <label className={styles.formLabel}>Quantity</label>
+              <input
+                className={styles.formInput}
+                type="number"
+                step="0.01"
+                value={form.quantity}
+                onChange={(e) => setForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                placeholder="0.00"
+                required
+              />
+
+              <label className={styles.formLabel}>Unit</label>
+              <select
+                className={styles.formInput}
+                value={form.unitDisplay}
+                onChange={(e) => setForm((prev) => ({ ...prev, unitDisplay: e.target.value }))}
+              >
+                {displayUnits.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
+
+              <label className={styles.formLabel}>Receipt Price ({form.currency})</label>
+              <input
+                className={styles.formInput}
+                type="number"
+                step="0.01"
+                value={form.entryPrice}
+                onChange={(e) => setForm((prev) => ({ ...prev, entryPrice: e.target.value }))}
+                placeholder={form.currency === "USD" ? "0.00 USD" : "0 VND"}
+                required
+              />
+
+              <label className={styles.formLabel}>Currency</label>
+              <select
+                className={styles.formInput}
+                value={form.currency}
+                onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
+              >
+                {displayCurrencies.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+
+              <p className={styles.previewText}>
+                Saving as: {form.asset === "Gold" ? "SJC Gold" : "Phu Quy Silver"} - {form.unitDisplay} - {form.currency}
+              </p>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => setIsFormOpen(false)}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className={styles.addBtn} disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </main>
 
       <Footer />
