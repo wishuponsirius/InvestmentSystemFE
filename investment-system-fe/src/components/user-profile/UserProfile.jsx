@@ -131,6 +131,8 @@ const UserProfile = () => {
         setUser(resp.data);
         const name = resp.data?.orgName || resp.data?.name || "";
         localStorage.setItem("displayName", name);
+        // Notify other components (e.g., header) about the update
+        window.dispatchEvent(new Event("authChanged"));
       } else {
         showMessage("error", resp.message || "Failed to update profile.");
       }

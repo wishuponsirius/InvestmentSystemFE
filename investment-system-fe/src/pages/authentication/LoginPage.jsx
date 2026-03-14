@@ -4,6 +4,7 @@ import axios from "axios"; // Import Axios
 import styles from "./LoginPage.module.css";
 import { FaFacebook, FaTwitter } from "react-icons/fa";
 import goldImage from "../../assets/image/gold-coin.png";
+import * as userService from "../../services/userService";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -43,6 +44,55 @@ const LoginPage = () => {
       if (userId) {
         localStorage.setItem("userId", String(userId));
       }
+
+      // Nếu backend không trả tên hiển thị, thử decode từ accessToken
+      let displayName =
+        payload.displayName ||
+        payload.name ||
+        payload.orgName ||
+        payload.user?.name ||
+        payload.user?.orgName;
+
+      if (!displayName && payload.accessToken) {
+        try {
+          const parts = payload.accessToken.split(".");
+          if (parts.length === 3) {
+            const jwtPayload = JSON.parse(atob(parts[1]));
+            displayName =
+              jwtPayload?.username ||
+              jwtPayload?.preferred_username ||
+              jwtPayload?.orgName ||
+              jwtPayload?.name ||
+              jwtPayload?.email ||
+              jwtPayload?.sub;
+          }
+        } catch (err) {
+          // ignore decode errors
+        }
+      }
+
+      if (displayName) {
+        localStorage.setItem("displayName", displayName);
+      }
+      // Clear avatar to avoid showing previous user's picture after login
+      localStorage.removeItem("avatarUrl");
+
+      // If we can fetch user profile, use it to get the most up-to-date avatar (and name)
+      try {
+        const profileResp = await userService.getUserProfile();
+        if (profileResp.success && profileResp.data) {
+          const profile = profileResp.data;
+          const name = profile.orgName || profile.name || "";
+          const avatar = profile.avatarUrl || "";
+          if (name) localStorage.setItem("displayName", name);
+          if (avatar) localStorage.setItem("avatarUrl", avatar);
+        }
+      } catch (e) {
+        // Ignore - we already have a minimal display name set above.
+      }
+
+      // Thông báo cho các component khác rằng auth đã thay đổi
+      window.dispatchEvent(new Event("authChanged"));
 
       // Xử lý chuyển trang dựa trên Role
       // Không mặc định thành 'admin' nếu backend không trả role.

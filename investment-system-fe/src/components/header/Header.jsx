@@ -20,55 +20,56 @@ const Header = ({ role = "GUEST" }) => {
 
   // Lấy tên hiển thị (username) và avatar từ localStorage để hiển thị bên cạnh avatar
   useEffect(() => {
-    const cachedName = localStorage.getItem("displayName");
-    if (cachedName) {
-      setUserName(cachedName);
-    }
-
-    const cachedAvatar = localStorage.getItem("avatarUrl");
-    if (cachedAvatar) {
-      setAvatarUrl(cachedAvatar);
-    }
-
-    if (!cachedName) {
-      const token = localStorage.getItem("accessToken");
-      if (!token) return;
-
-      try {
-        const parts = token.split(".");
-        if (parts.length !== 3) return;
-
-        const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-        const padded = base64 + "===".slice((base64.length + 3) % 4);
-        const payload = JSON.parse(atob(padded));
-
-        const name =
-          payload?.username ||
-          payload?.preferred_username ||
-          payload?.orgName ||
-          payload?.name ||
-          payload?.email ||
-          payload?.sub;
-
-        const finalName = name || "";
-        setUserName(finalName);
-        if (finalName) localStorage.setItem("displayName", finalName);
-      } catch (e) {
-        console.error("Failed to decode access token:", e);
-      }
-    }
-
     const updateFromStorage = () => {
-      setUserName(localStorage.getItem("displayName") || "");
-      setAvatarUrl(localStorage.getItem("avatarUrl") || "");
+      const cachedName = localStorage.getItem("displayName");
+      const cachedAvatar = localStorage.getItem("avatarUrl");
+
+      if (cachedName) {
+        setUserName(cachedName);
+      } else {
+        // Nếu chưa có tên trong localStorage, mua nó từ accessToken
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+          try {
+            const parts = token.split(".");
+            if (parts.length === 3) {
+              const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+              const padded = base64 + "===".slice((base64.length + 3) % 4);
+              const payload = JSON.parse(atob(padded));
+
+              const name =
+                payload?.username ||
+                payload?.preferred_username ||
+                payload?.orgName ||
+                payload?.name ||
+                payload?.email ||
+                payload?.sub;
+
+              const finalName = name || "";
+              setUserName(finalName);
+              if (finalName) localStorage.setItem("displayName", finalName);
+            }
+          } catch (e) {
+            console.error("Failed to decode access token:", e);
+          }
+        } else {
+          setUserName("");
+        }
+      }
+
+      setAvatarUrl(cachedAvatar || "");
     };
+
+    updateFromStorage();
 
     window.addEventListener("storage", updateFromStorage);
     window.addEventListener("avatarUpdated", updateFromStorage);
+    window.addEventListener("authChanged", updateFromStorage);
 
     return () => {
       window.removeEventListener("storage", updateFromStorage);
       window.removeEventListener("avatarUpdated", updateFromStorage);
+      window.removeEventListener("authChanged", updateFromStorage);
     };
   }, []);
 
@@ -106,9 +107,14 @@ const Header = ({ role = "GUEST" }) => {
   const handleLogout = () => {
     setIsDropdownOpen(false);
 
-    // Xóa toàn bộ token khỏi localStorage để thực sự đăng xuất
+    // Xóa toàn bộ token và thông tin người dùng khỏi localStorage để thực sự đăng xuất
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    localStorage.removeItem("displayName");
+    localStorage.removeItem("avatarUrl");
+
+    // Thông báo cho các component khác biết rằng trạng thái auth đã thay đổi
+    window.dispatchEvent(new Event("authChanged"));
 
     // Đẩy người dùng về trang đăng nhập
     navigate("/login");
