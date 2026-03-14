@@ -34,34 +34,105 @@
   font-weight: bold;
 }
 
-/* Overview Cards */
+/* =========================================
+   OVERVIEW CARDS (NÂNG CẤP CHUYÊN NGHIỆP SAAS)
+   ========================================= */
 .overviewGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 24px;
 }
 
 .overviewCard {
   background: #fff;
-  padding: 25px;
-  border-radius: 10px;
-  border: 1px solid #f0f0f0;
+  padding: 24px 28px;
+  border-radius: 16px;
+  border: 1px solid #eef0f4; /* Viền nhạt và sang hơn */
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03); /* Bóng đổ siêu mềm */
+  display: flex;
+  flex-direction: row; /* Xếp ngang thay vì dọc */
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.cardLabel {
-  display: block;
-  color: #222;
-  font-size: 14px;
-  margin-bottom: 10px;
+/* Dải màu viền lề trái siêu ngầu khi Hover */
+.overviewCard::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #ffb84d; /* Màu chủ đạo của app */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.overviewCard:hover {
+  transform: translateY(-4px); /* Nảy nhẹ lên */
+  box-shadow: 0 14px 28px -4px rgba(0, 0, 0, 0.08); /* Đổ bóng sâu hơn */
+  border-color: #fbe0b3;
+}
+
+.overviewCard:hover::before {
+  opacity: 1; /* Hiện dải màu lề trái */
+}
+
+.cardHeader {
+  order: 2; /* Đảo Icon sang bên PHẢI */
+  margin-left: auto;
+}
+
+.cardIconWrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px; /* Hình vuông bo góc nhìn hiện đại hơn tròn */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6); /* Hiệu ứng khối nổi (inner shadow) */
+}
+
+.cardInfo {
+  order: 1; /* Đảo text sang bên TRÁI */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .cardValue {
-  font-size: 22px;
-  font-weight: 600;
-  color: #222;
+  font-size: 32px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1;
+  letter-spacing: -0.5px; /* Ép chữ sát lại cho hiện đại */
 }
 
-/* Toolbar & Search Bar */
+.cardLabel {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase; /* In hoa chữ nhỏ tạo cảm giác Dashboard xịn */
+  letter-spacing: 0.5px;
+}
+
+/* Responsive cho lưới overview */
+@media (max-width: 1024px) {
+  .overviewGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================
+   TOOLBAR & SEARCH (Giữ nguyên)
+   ========================================= */
 .toolbar {
   display: flex;
   align-items: center;
@@ -74,11 +145,17 @@
   gap: 15px;
 }
 
+.searchGroupWrapper {
+  position: relative;
+  flex: 0 0 280px;
+}
+
 .searchGroup {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex: 0 0 280px;
+  width: 100%;
+  background: white;
 }
 
 .searchIcon {
@@ -108,25 +185,6 @@
   margin: 0 10px;
 }
 
-.toolIcons {
-  display: flex;
-  gap: 18px;
-}
-
-.toolBtn {
-  background: none;
-  border: none;
-  color: #ffb84d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.toolBtn:hover {
-  transform: scale(1.1);
-}
-
 .filterTags {
   display: flex;
   gap: 10px;
@@ -151,6 +209,7 @@
 .addActions {
   margin-left: auto;
 }
+
 .addUserBtn {
   background: none;
   border: none;
@@ -159,9 +218,24 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  padding: 0;
+  transition:
+    transform 0.2s,
+    color 0.2s;
 }
 
-/* Table Style */
+.addUserBtn:hover {
+  transform: scale(1.1);
+  color: #f5a631;
+}
+
+.addUserBtn span {
+  display: none;
+}
+
+/* =========================================
+   TABLE STYLE & AVATAR (Giữ nguyên)
+   ========================================= */
 .tableWrapper {
   background: white;
   padding: 20px;
@@ -190,24 +264,114 @@
   border-bottom: 1px solid #fafafa;
 }
 
+.tableRow {
+  transition: background-color 0.2s ease;
+}
+
+.tableRow:hover {
+  background-color: #f8fafc;
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffb84d, #f97316);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .userNameText {
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.userEmailText {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.dateText {
+  color: #4b5563;
+  font-size: 13.5px;
 }
 
 .badge {
-  padding: 4px 12px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-size: 11px;
-  font-weight: bold;
-  color: white;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .badgeAdmin {
-  background-color: #74e39a;
+  background-color: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
 }
+
 .badgeInvestor {
-  background-color: #a020f0;
+  background-color: #f0fdfa;
+  color: #0d9488;
+  border: 1px solid #ccfbf1;
+}
+
+.actionsCell {
+  text-align: right;
+  padding-right: 20px !important;
+}
+
+.actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.actionBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnView:hover {
+  background-color: #eff6ff;
+  color: #3b82f6;
+  border-color: #bfdbfe;
+}
+.btnEdit:hover {
+  background-color: #fef3c7;
+  color: #d97706;
+  border-color: #fde68a;
+}
+.btnDelete:hover {
+  background-color: #fef2f2;
+  color: #ef4444;
+  border-color: #fecaca;
 }
 
 /* Switch Toggle */
@@ -217,13 +381,11 @@
   width: 36px;
   height: 20px;
 }
-
 .switch input {
   opacity: 0;
   width: 0;
   height: 0;
 }
-
 .slider {
   position: absolute;
   cursor: pointer;
@@ -235,7 +397,6 @@
   transition: 0.4s;
   border-radius: 34px;
 }
-
 .slider:before {
   position: absolute;
   content: "";
@@ -247,7 +408,6 @@
   transition: 0.4s;
   border-radius: 50%;
 }
-
 input:checked + .slider {
   background-color: #ffb84d;
 }
@@ -255,77 +415,100 @@ input:checked + .slider:before {
   transform: translateX(16px);
 }
 
-/* Actions */
-.actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.actionBtn {
-  background: none;
-  border: none;
-  color: #ffb84d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.actionBtn:hover {
-  color: #ffb84d;
-}
-
-/* Pagination */
+/* =========================================
+   PAGINATION (PHÂN TRANG THÔNG MINH)
+   ========================================= */
 .pagination {
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #f5f5f5;
 }
 
-.pageBtn,
-.activePage {
+.pageBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  color: #4b5563;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+}
+
+.pageBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background-color: white;
+}
+
+.pageNumbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pageNumberBtn {
   width: 32px;
   height: 32px;
-  border: 1px solid #eee;
-  background: #fff;
-  cursor: pointer;
-  border-radius: 4px;
-  color: #666;
-  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  transition: all 0.2s;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.pageNumberBtn:hover {
+  background-color: #f3f4f6;
 }
 
 .activePage {
-  border-color: #ffda91;
   background-color: #ffda91;
   color: white;
-  font-weight: bold;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* Bao bọc ô search để chứa dropdown absolute */
-.searchGroupWrapper {
-  position: relative;
-  flex: 0 0 280px;
+.activePage:hover {
+  background-color: #ffda91;
 }
 
-/* Form Search chính */
-.searchGroup {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  background: white; /* Đảm bảo ô input có nền chuẩn */
+.pageEllipsis {
+  width: 32px;
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.pageInfo {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.pageInfo strong {
+  color: #1f2937;
+  font-weight: 600;
 }
 
 /* Khung Dropdown Gợi Ý */
 .suggestionBox {
   position: absolute;
-  top: 130%; /* Nằm ngay dưới thanh search */
+  top: 130%;
   left: 0;
   width: 100%;
   background-color: white;
@@ -339,7 +522,6 @@ input:checked + .slider:before {
   flex-direction: column;
 }
 
-/* Từng item trong dropdown */
 .suggestionItem {
   padding: 12px 16px;
   cursor: pointer;
@@ -352,7 +534,7 @@ input:checked + .slider:before {
 }
 
 .suggestionItem:hover {
-  background-color: #fcf8f0; /* Màu cam nhạt tông xuyệt tông */
+  background-color: #fcf8f0;
 }
 
 .sugName {
@@ -367,7 +549,6 @@ input:checked + .slider:before {
   color: #888;
 }
 
-/* Trạng thái Loading hoặc Trống */
 .suggestionState {
   padding: 16px;
   text-align: center;
@@ -379,7 +560,6 @@ input:checked + .slider:before {
   gap: 8px;
 }
 
-/* Hiệu ứng xoay cho icon Loading */
 .spinIcon {
   animation: spin 1s linear infinite;
   color: #ffb84d;
@@ -394,8 +574,6 @@ input:checked + .slider:before {
 /* =========================================
    MODAL CREATE USER STYLES
    ========================================= */
-
-/* Nền đen mờ phủ toàn màn hình */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -407,11 +585,10 @@ input:checked + .slider:before {
   display: flex;
   justify-content: center;
   align-items: center;
-  backdrop-filter: blur(2px); /* Làm mờ cảnh nền */
+  backdrop-filter: blur(2px);
   animation: fadeIn 0.2s ease-out;
 }
 
-/* Khung trắng chứa form */
 .modalContent {
   background: white;
   width: 100%;
@@ -540,7 +717,6 @@ input:checked + .slider:before {
   cursor: not-allowed;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -558,5 +734,46 @@ input:checked + .slider:before {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* =========================================
+   TOAST NOTIFICATION (THÔNG BÁO NỔI GÓC DƯỚI)
+   ========================================= */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+  z-index: 10000;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toastSuccess {
+  background-color: #10b981;
+}
+
+.toastError {
+  background-color: #ef4444;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
