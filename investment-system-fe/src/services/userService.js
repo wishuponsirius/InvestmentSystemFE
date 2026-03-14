@@ -49,6 +49,16 @@ export const getUserProfile = async () => {
 };
 
 /**
+ * Update user profile (e.g., full name)
+ * @param {Object} data
+ * @returns {Promise<any>}
+ */
+export const updateProfile = async (data) => {
+  const response = await backendApi.patch("/me", data);
+  return response.data;
+};
+
+/**
  * Change user password
  * @param {string} currentPassword 
  * @param {string} newPassword 

@@ -4,11 +4,6 @@ import {
   User,
   Lock,
   Bell,
-  ArrowDownCircle,
-  ArrowRightCircle,
-  Box,
-  Users,
-  Sun, // Thêm icon Sun cho Appearance
   X,
   MapPin,
   UserPen,
@@ -24,6 +19,7 @@ const UserProfile = () => {
 
   // State cho thông tin người dùng
   const [user, setUser] = useState(null);
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({ type: "", text: "" });
 
@@ -44,6 +40,9 @@ const UserProfile = () => {
       const resp = await userService.getUserProfile();
       if (resp.success) {
         setUser(resp.data);
+        const name = resp.data?.orgName || resp.data?.name || "";
+        setFullName(name);
+        localStorage.setItem("displayName", name);
       }
     } catch (err) {
       console.error("Failed to fetch profile:", err);
@@ -108,15 +107,35 @@ const UserProfile = () => {
     }
   };
 
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+
+    if (!fullName.trim()) {
+      showMessage("error", "Full name is required.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await userService.updateProfile({ orgName: fullName.trim() });
+      if (resp.success) {
+        showMessage("success", "Profile updated successfully!");
+        setUser(resp.data);
+        const name = resp.data?.orgName || resp.data?.name || "";
+        localStorage.setItem("displayName", name);
+      } else {
+        showMessage("error", resp.message || "Failed to update profile.");
+      }
+    } catch (err) {
+      showMessage("error", err.response?.data?.message || "An error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sidebarTabs = [
     { name: "Edit profile", icon: User },
-    { name: "Password", icon: Lock },
-    { name: "Notifications", icon: Bell },
-    { name: "Chat export", icon: ArrowDownCircle },
-    { name: "Sessions", icon: ArrowRightCircle },
-    { name: "Applications", icon: Box },
-    { name: "Team", icon: Users },
-    { name: "Appearance", icon: Sun }, // Cập nhật theo ảnh mới
+    { name: "Password", icon: Lock }
   ];
 
   // Hàm render giao diện Edit Profile
@@ -156,39 +175,22 @@ const UserProfile = () => {
           <User className={styles.inputIcon} size={18} />
           <input
             type="text"
-            placeholder="Username or email"
+            placeholder="John Doe"
             className={`${styles.input} ${styles.inputGray}`}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
           />
         </div>
       </div>
 
-      <div className={styles.formGroup}>
-        <label className={styles.label}>Location</label>
-        <div className={styles.inputWrapper}>
-          <MapPin className={styles.inputIcon} size={18} />
-          <input
-            type="text"
-            defaultValue="Sai Gon, Vietnam"
-            className={`${styles.input} ${styles.inputWhite}`}
-          />
-        </div>
-      </div>
-
-      <div className={styles.formGroup}>
-        <div className={styles.labelRow}>
-          <label className={styles.label}>Bio</label>
-          <span className={styles.charCount}>880</span>
-        </div>
-        <div className={styles.inputWrapper}>
-          <UserPen className={styles.textareaIcon} size={18} />
-          <textarea
-            placeholder="Short bio"
-            className={`${styles.textarea} ${styles.inputGray}`}
-          ></textarea>
-        </div>
-      </div>
-
-      <button className={styles.submitBtn}>Save changes</button>
+      <button
+        type="button"
+        className={styles.submitBtn}
+        onClick={handleUpdateProfile}
+        disabled={loading}
+      >
+        {loading ? "Saving..." : "Save changes"}
+      </button>
     </div>
   );
 

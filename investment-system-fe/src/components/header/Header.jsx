@@ -14,7 +14,43 @@ const Header = ({ role = "GUEST" }) => {
 
   // State quản lý việc mở/đóng dropdown
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [userName, setUserName] = useState("");
   const dropdownRef = useRef(null);
+
+  // Lấy tên hiển thị (username) từ localStorage hoặc token để hiển thị bên cạnh avatar
+  useEffect(() => {
+    const cached = localStorage.getItem("displayName");
+    if (cached) {
+      setUserName(cached);
+      return;
+    }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) return;
+
+      const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64 + "===".slice((base64.length + 3) % 4);
+      const payload = JSON.parse(atob(padded));
+
+      const name =
+        payload?.username ||
+        payload?.preferred_username ||
+        payload?.orgName ||
+        payload?.name ||
+        payload?.email ||
+        payload?.sub;
+
+      const finalName = name || "";
+      setUserName(finalName);
+      if (finalName) localStorage.setItem("displayName", finalName);
+    } catch (e) {
+      console.error("Failed to decode access token:", e);
+    }
+  }, []);
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -111,6 +147,9 @@ const Header = ({ role = "GUEST" }) => {
             ref={dropdownRef}
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
+            <span className={styles.welcomeText}>
+              Welcome{userName ? `, ${userName}` : ""}
+            </span>
             <img
               src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
               alt="User Avatar"
