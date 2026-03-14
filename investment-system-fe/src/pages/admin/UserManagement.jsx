@@ -8,6 +8,14 @@ import {
   Pencil,
   Trash2,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  UserCheck,
+  UserX,
+  ShieldAlert,
+  Building2,
+  Briefcase,
 } from "lucide-react";
 import Header from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
@@ -16,29 +24,24 @@ import styles from "../../pages/admin/UserManagement.module.css";
 const UserManagement = () => {
   const [role] = useState("ADMIN");
 
-  // State quản lý dữ liệu bảng chính
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalSystemUsers, setTotalSystemUsers] = useState(0);
   const rowsPerPage = 5;
 
-  // State cho Search và Filter
   const [searchInput, setSearchInput] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
 
-  // State cho dropdown gợi ý
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
 
-  // State cho Create User Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -48,20 +51,30 @@ const UserManagement = () => {
     role: "INSTITUTION",
   });
 
-  // State cho View User Details Modal
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
-  // --- THÊM MỚI: State cho Edit User Modal ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState("");
 
+  // --- HỆ THỐNG TOAST THÔNG BÁO ---
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success",
+  });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3000); // Tự động ẩn sau 3 giây
+  };
+
   const searchContainerRef = useRef(null);
 
-  // TẮT DROPDOWN KHI CLICK RA NGOÀI
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -75,7 +88,6 @@ const UserManagement = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // GỌI API GỢI Ý (DEBOUNCE 400ms)
   useEffect(() => {
     if (!searchInput.trim()) {
       setSuggestions([]);
@@ -94,21 +106,16 @@ const UserManagement = () => {
         const response = await axios.get(apiUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (response.data.success) {
-          setSuggestions(response.data.data.content);
-        }
+        if (response.data.success) setSuggestions(response.data.data.content);
       } catch (err) {
         console.error("Error fetching suggestions:", err);
       } finally {
         setIsFetchingSuggestions(false);
       }
     }, 400);
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchInput, selectedRole]);
 
-  // GỌI API BẢNG CHÍNH
   useEffect(() => {
     const fetchUsers = async () => {
       setIsLoading(true);
@@ -116,7 +123,6 @@ const UserManagement = () => {
       try {
         const token = localStorage.getItem("accessToken");
         let apiUrl = `http://localhost:8080/admin/users?page=${currentPage - 1}&size=${rowsPerPage}`;
-
         if (searchKeyword)
           apiUrl += `&search=${encodeURIComponent(searchKeyword)}`;
         if (selectedRole) apiUrl += `&role=${selectedRole}`;
@@ -125,7 +131,6 @@ const UserManagement = () => {
         const response = await axios.get(apiUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         if (response.data.success) {
           setUsers(response.data.data.content);
           setTotalPages(response.data.data.totalPages || 1);
@@ -138,11 +143,9 @@ const UserManagement = () => {
         setIsLoading(false);
       }
     };
-
     fetchUsers();
   }, [currentPage, searchKeyword, selectedRole, refreshTrigger]);
 
-  // TÍNH TOÁN THỐNG KÊ TRỰC TIẾP
   const pageStats = useMemo(() => {
     const activeCount = users.filter((u) => u.isActive === true).length;
     const inactiveCount = users.filter((u) => u.isActive === false).length;
@@ -150,21 +153,60 @@ const UserManagement = () => {
     const instCount = users.filter((u) => u.role === "INSTITUTION").length;
 
     return [
-      { label: "Total (System)", value: totalSystemUsers },
-      { label: "Role Types", value: 2 },
-      { label: "Active (This page)", value: activeCount },
-      { label: "Inactive (This page)", value: inactiveCount },
-      { label: "Admins (This page)", value: adminCount },
-      { label: "Institutions (This page)", value: instCount },
+      {
+        label: "Total (System)",
+        value: totalSystemUsers,
+        icon: Users,
+        color: "#3b82f6",
+        bg: "#eff6ff",
+      },
+      {
+        label: "Role Types",
+        value: 2,
+        icon: Briefcase,
+        color: "#6b7280",
+        bg: "#f3f4f6",
+      },
+      {
+        label: "Active (This page)",
+        value: activeCount,
+        icon: UserCheck,
+        color: "#10b981",
+        bg: "#ecfdf5",
+      },
+      {
+        label: "Inactive (This page)",
+        value: inactiveCount,
+        icon: UserX,
+        color: "#ef4444",
+        bg: "#fef2f2",
+      },
+      {
+        label: "Admins (This page)",
+        value: adminCount,
+        icon: ShieldAlert,
+        color: "#8b5cf6",
+        bg: "#f5f3ff",
+      },
+      {
+        label: "Institutions (This page)",
+        value: instCount,
+        icon: Building2,
+        color: "#f59e0b",
+        bg: "#fffbeb",
+      },
     ];
   }, [users, totalSystemUsers]);
 
-  // --- HÀM TẠO USER ---
+  const getInitials = (name) => {
+    if (!name) return "US";
+    return name.substring(0, 2).toUpperCase();
+  };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitError("");
-
     try {
       const token = localStorage.getItem("accessToken");
       const response = await axios.post(
@@ -172,16 +214,14 @@ const UserManagement = () => {
         newUserData,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
       if (response.data.success) {
         setIsAddModalOpen(false);
         setNewUserData({ orgName: "", contactEmail: "", role: "INSTITUTION" });
         setCurrentPage(1);
         setRefreshTrigger((prev) => prev + 1);
-        alert("User created successfully!");
+        showToast("User created successfully!", "success");
       }
     } catch (err) {
-      console.error("Error creating user:", err);
       setSubmitError(
         err.response?.data?.message || "Failed to create new user.",
       );
@@ -195,36 +235,27 @@ const UserManagement = () => {
     setNewUserData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // --- HÀM LẤY CHI TIẾT USER (VIEW) ---
   const handleViewUser = async (id) => {
-    setIsFetchingDetails(true);
     try {
       const token = localStorage.getItem("accessToken");
       const response = await axios.get(
         `http://localhost:8080/admin/users/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (response.data.success) {
         setSelectedUser(response.data.data);
         setIsViewModalOpen(true);
       }
-    } catch (err) {
-      console.error("Error fetching user details:", err);
-      alert("Failed to load user details.");
-    } finally {
-      setIsFetchingDetails(false);
+    } catch {
+      showToast("Failed to load user details.", "error");
     }
   };
 
-  // --- THÊM MỚI: HÀM MỞ MODAL EDIT USER ---
   const handleOpenEditModal = (user) => {
-    // Đổ dữ liệu hiện tại của user vào form
     setEditingUser({
       id: user.id,
       orgName: user.orgName,
-      contactEmail: user.contactEmail, // Email chỉ để hiển thị, ko gửi lúc Update
+      contactEmail: user.contactEmail,
       role: user.role,
       isActive: user.isActive,
     });
@@ -232,38 +263,30 @@ const UserManagement = () => {
     setIsEditModalOpen(true);
   };
 
-  // --- THÊM MỚI: HÀM CẬP NHẬT USER (UPDATE) ---
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     setIsUpdating(true);
     setUpdateError("");
-
     try {
       const token = localStorage.getItem("accessToken");
-
-      // Đã thêm 'id' vào payload theo yêu cầu của Swagger
       const payload = {
         id: editingUser.id,
         orgName: editingUser.orgName,
         role: editingUser.role,
         isActive: editingUser.isActive,
       };
-
-      // Gọi API với method PATCH (hoặc thay bằng PATCH nếu Swagger yêu cầu)
       const response = await axios.patch(
         `http://localhost:8080/admin/users/${editingUser.id}`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
       if (response.data.success) {
         setIsEditModalOpen(false);
         setEditingUser(null);
-        setRefreshTrigger((prev) => prev + 1); // Refresh lại bảng
-        alert("User updated successfully!");
+        setRefreshTrigger((prev) => prev + 1);
+        showToast("User updated successfully!", "success");
       }
     } catch (err) {
-      console.error("Error updating user:", err);
       setUpdateError(err.response?.data?.message || "Failed to update user.");
     } finally {
       setIsUpdating(false);
@@ -273,96 +296,99 @@ const UserManagement = () => {
   const handleEditInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "isActive") {
-      setEditingUser((prev) => ({ ...prev, isActive: value === "true" })); // Chuyển chuỗi select thành boolean
+      setEditingUser((prev) => ({ ...prev, isActive: value === "true" }));
     } else {
       setEditingUser((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  // --- THÊM MỚI: HÀM XÓA USER (DELETE) ---
   const handleDeleteUser = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this user?",
     );
     if (!confirmDelete) return;
-
     try {
       const token = localStorage.getItem("accessToken");
       const response = await axios.delete(
         `http://localhost:8080/admin/users/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-
       if (response.data.success) {
-        alert("User deleted successfully!");
-        setRefreshTrigger((prev) => prev + 1); // Refresh bảng sau khi xóa
+        showToast("User deleted successfully!", "success");
+        setRefreshTrigger((prev) => prev + 1);
       }
     } catch (err) {
-      console.error("Error deleting user:", err);
-      alert(err.response?.data?.message || "Failed to delete user.");
+      showToast(
+        err.response?.data?.message || "Failed to delete user.",
+        "error",
+      );
     }
   };
 
-  // Các hàm xử lý sự kiện
   const handleSearch = () => {
     setSearchKeyword(searchInput);
     setCurrentPage(1);
     setShowSuggestions(false);
   };
-
   const handleKeyDown = (e) => {
     if (e.key === "Enter") handleSearch();
   };
-
   const clearSearch = () => {
     setSearchInput("");
     setSearchKeyword("");
     setCurrentPage(1);
     setShowSuggestions(false);
   };
-
   const handleSuggestionClick = (user) => {
     setSearchInput(user.orgName);
     setSearchKeyword(user.orgName);
     setCurrentPage(1);
     setShowSuggestions(false);
   };
-
   const toggleRoleFilter = (clickedRole) => {
     if (selectedRole === clickedRole) setSelectedRole("");
     else setSelectedRole(clickedRole);
     setCurrentPage(1);
   };
-
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
+    return new Date(dateString).toLocaleDateString("en-GB", {
       day: "2-digit",
-      month: "2-digit",
+      month: "short",
       year: "numeric",
     });
   };
-
-  const paginationArray = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
+  };
 
   return (
     <div className={styles.wrapper}>
       <Header role={role} />
 
       <main className={styles.mainContent}>
-        {/* Overview Section */}
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>User Overview</h2>
           <div className={styles.overviewGrid}>
-            {pageStats.map((item, index) => (
-              <div key={index} className={styles.overviewCard}>
-                <span className={styles.cardLabel}>{item.label}</span>
-                <span className={styles.cardValue}>{item.value}</span>
-              </div>
-            ))}
+            {pageStats.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={index} className={styles.overviewCard}>
+                  <div className={styles.cardHeader}>
+                    <div
+                      className={styles.cardIconWrapper}
+                      style={{ backgroundColor: item.bg, color: item.color }}
+                    >
+                      <Icon size={22} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <div className={styles.cardInfo}>
+                    <span className={styles.cardValue}>{item.value}</span>
+                    <span className={styles.cardLabel}>{item.label}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -371,7 +397,6 @@ const UserManagement = () => {
 
           <div className={styles.contentContainer}>
             <div className={styles.toolbar}>
-              {/* Search Group */}
               <div
                 className={styles.searchGroupWrapper}
                 ref={searchContainerRef}
@@ -385,7 +410,7 @@ const UserManagement = () => {
                   />
                   <input
                     type="text"
-                    placeholder="Search user..."
+                    placeholder="Search by organization name..."
                     className={styles.searchInput}
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -404,7 +429,6 @@ const UserManagement = () => {
                   )}
                 </div>
 
-                {/* Dropdown Gợi ý */}
                 {showSuggestions && (
                   <div className={styles.suggestionBox}>
                     {isFetchingSuggestions ? (
@@ -436,7 +460,6 @@ const UserManagement = () => {
 
               <div className={styles.verticalDivider}></div>
 
-              {/* Filter Tags */}
               <div className={styles.filterTags}>
                 <span
                   className={`${styles.tag} ${styles.tagAdmin}`}
@@ -447,7 +470,15 @@ const UserManagement = () => {
                   }}
                   onClick={() => toggleRoleFilter("ADMIN")}
                 >
-                  ADMIN {selectedRole === "ADMIN" && "×"}
+                  <ShieldAlert
+                    size={12}
+                    style={{
+                      display: "inline",
+                      marginRight: "4px",
+                      verticalAlign: "text-bottom",
+                    }}
+                  />{" "}
+                  ADMIN
                 </span>
                 <span
                   className={`${styles.tag} ${styles.tagInvestor}`}
@@ -460,11 +491,18 @@ const UserManagement = () => {
                   }}
                   onClick={() => toggleRoleFilter("INSTITUTION")}
                 >
-                  INSTITUTION {selectedRole === "INSTITUTION" && "×"}
+                  <Building2
+                    size={12}
+                    style={{
+                      display: "inline",
+                      marginRight: "4px",
+                      verticalAlign: "text-bottom",
+                    }}
+                  />{" "}
+                  INSTITUTION
                 </span>
               </div>
 
-              {/* MỞ MODAL CREATE USER KHI CLICK */}
               <div className={styles.addActions}>
                 <button
                   className={styles.addUserBtn}
@@ -475,37 +513,37 @@ const UserManagement = () => {
               </div>
             </div>
 
-            {/* Table Wrapper */}
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>User Name</th>
-                    <th>Account</th>
+                    <th>User / Organization</th>
                     <th>Role</th>
                     <th>Date Joined</th>
                     <th>Status</th>
-                    <th>Action</th>
+                    <th style={{ textAlign: "right", paddingRight: "20px" }}>
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
                       <td
-                        colSpan="6"
-                        style={{ textAlign: "center", padding: "40px" }}
+                        colSpan="5"
+                        style={{ textAlign: "center", padding: "60px" }}
                       >
                         <Loader2
-                          size={24}
+                          size={30}
                           className={styles.spinIcon}
-                          style={{ margin: "0 auto" }}
+                          style={{ margin: "0 auto", color: "#3b82f6" }}
                         />
                       </td>
                     </tr>
                   ) : error ? (
                     <tr>
                       <td
-                        colSpan="6"
+                        colSpan="5"
                         style={{
                           textAlign: "center",
                           padding: "20px",
@@ -518,17 +556,32 @@ const UserManagement = () => {
                   ) : users.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="6"
-                        style={{ textAlign: "center", padding: "20px" }}
+                        colSpan="5"
+                        style={{
+                          textAlign: "center",
+                          padding: "40px",
+                          color: "#888",
+                        }}
                       >
-                        No users found.
+                        No users found. Try adjusting your search or filters.
                       </td>
                     </tr>
                   ) : (
                     users.map((user) => (
-                      <tr key={user.id}>
-                        <td className={styles.userNameText}>{user.orgName}</td>
-                        <td>{user.contactEmail}</td>
+                      <tr key={user.id} className={styles.tableRow}>
+                        <td className={styles.userCell}>
+                          <div className={styles.avatar}>
+                            {getInitials(user.orgName)}
+                          </div>
+                          <div className={styles.userInfo}>
+                            <span className={styles.userNameText}>
+                              {user.orgName}
+                            </span>
+                            <span className={styles.userEmailText}>
+                              {user.contactEmail}
+                            </span>
+                          </div>
+                        </td>
                         <td>
                           <span
                             className={`${styles.badge} ${user.role === "ADMIN" ? styles.badgeAdmin : styles.badgeInvestor}`}
@@ -536,7 +589,9 @@ const UserManagement = () => {
                             {user.role}
                           </span>
                         </td>
-                        <td>{formatDate(user.createDate)}</td>
+                        <td className={styles.dateText}>
+                          {formatDate(user.createDate)}
+                        </td>
                         <td>
                           <label className={styles.switch}>
                             <input
@@ -547,31 +602,30 @@ const UserManagement = () => {
                             <span className={styles.slider}></span>
                           </label>
                         </td>
-                        <td className={styles.actions}>
-                          {/* VIEW BTN */}
-                          <button
-                            className={styles.actionBtn}
-                            onClick={() => handleViewUser(user.id)}
-                            disabled={isFetchingDetails}
-                          >
-                            <Eye size={18} />
-                          </button>
-
-                          {/* EDIT BTN */}
-                          <button
-                            className={styles.actionBtn}
-                            onClick={() => handleOpenEditModal(user)}
-                          >
-                            <Pencil size={18} />
-                          </button>
-
-                          {/* DELETE BTN */}
-                          <button
-                            className={styles.actionBtn}
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                        <td className={styles.actionsCell}>
+                          <div className={styles.actions}>
+                            <button
+                              className={`${styles.actionBtn} ${styles.btnView}`}
+                              onClick={() => handleViewUser(user.id)}
+                              title="View Details"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              className={`${styles.actionBtn} ${styles.btnEdit}`}
+                              onClick={() => handleOpenEditModal(user)}
+                              title="Edit User"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              className={`${styles.actionBtn} ${styles.btnDelete}`}
+                              onClick={() => handleDeleteUser(user.id)}
+                              title="Delete User"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -581,19 +635,52 @@ const UserManagement = () => {
 
               {!isLoading && totalPages > 0 && (
                 <div className={styles.pagination}>
-                  {paginationArray.map((page) => (
-                    <button
-                      key={page}
-                      className={
-                        currentPage === page
-                          ? styles.activePage
-                          : styles.pageBtn
-                      }
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  <button
+                    className={styles.pageBtn}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <div className={styles.pageNumbers}>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => {
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`${styles.pageNumberBtn} ${currentPage === page ? styles.activePage : ""}`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
+                        if (
+                          page === currentPage - 2 ||
+                          page === currentPage + 2
+                        ) {
+                          return (
+                            <span key={page} className={styles.pageEllipsis}>
+                              ...
+                            </span>
+                          );
+                        }
+                        return null;
+                      },
+                    )}
+                  </div>
+                  <button
+                    className={styles.pageBtn}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
               )}
             </div>
@@ -602,6 +689,15 @@ const UserManagement = () => {
       </main>
 
       <Footer />
+
+      {/* --- HIỂN THỊ TOAST THÔNG BÁO --- */}
+      {toast.show && (
+        <div
+          className={`${styles.toast} ${styles[toast.type === "success" ? "toastSuccess" : "toastError"]}`}
+        >
+          {toast.message}
+        </div>
+      )}
 
       {/* --- Modal Create User --- */}
       {isAddModalOpen && (
@@ -624,7 +720,6 @@ const UserManagement = () => {
                   name="orgName"
                   value={newUserData.orgName}
                   onChange={handleInputChange}
-                  placeholder="Enter organization name"
                   required
                 />
               </div>
@@ -635,7 +730,6 @@ const UserManagement = () => {
                   name="contactEmail"
                   value={newUserData.contactEmail}
                   onChange={handleInputChange}
-                  placeholder="Enter email address"
                   required
                 />
               </div>
@@ -691,7 +785,6 @@ const UserManagement = () => {
             <form onSubmit={handleUpdateUser} className={styles.modalForm}>
               <div className={styles.modalFormGroup}>
                 <label>Contact Email (Cannot be changed)</label>
-                {/* Cho phép xem nhưng disable để không bị sửa đổi */}
                 <input
                   type="email"
                   value={editingUser.contactEmail}
@@ -699,7 +792,6 @@ const UserManagement = () => {
                   style={{ backgroundColor: "#f5f5f5", color: "#888" }}
                 />
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>Organization / User Name</label>
                 <input
@@ -710,7 +802,6 @@ const UserManagement = () => {
                   required
                 />
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>Role</label>
                 <select
@@ -722,7 +813,6 @@ const UserManagement = () => {
                   <option value="ADMIN">Admin</option>
                 </select>
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>Status</label>
                 <select
@@ -734,7 +824,6 @@ const UserManagement = () => {
                   <option value="false">Inactive</option>
                 </select>
               </div>
-
               {updateError && (
                 <div className={styles.modalError}>{updateError}</div>
               )}
@@ -773,7 +862,6 @@ const UserManagement = () => {
                 <X size={20} />
               </button>
             </div>
-
             <div className={styles.modalForm}>
               <div className={styles.modalFormGroup}>
                 <label>Organization / User Name</label>
@@ -783,7 +871,6 @@ const UserManagement = () => {
                   readOnly
                 />
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>Contact Email</label>
                 <input
@@ -792,7 +879,6 @@ const UserManagement = () => {
                   readOnly
                 />
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>Role</label>
                 <input
@@ -801,7 +887,6 @@ const UserManagement = () => {
                   readOnly
                 />
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>Account Status</label>
                 <input
@@ -810,7 +895,6 @@ const UserManagement = () => {
                   readOnly
                 />
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>System Status</label>
                 <input
@@ -822,7 +906,6 @@ const UserManagement = () => {
                   readOnly
                 />
               </div>
-
               <div className={styles.modalFormGroup}>
                 <label>Date Joined</label>
                 <input
@@ -831,7 +914,6 @@ const UserManagement = () => {
                   readOnly
                 />
               </div>
-
               <div className={styles.modalFooter}>
                 <button
                   type="button"
