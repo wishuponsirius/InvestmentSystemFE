@@ -83,7 +83,13 @@ export const uploadAvatar = async (file) => {
 
   const response = await backendApi.patch(
     "/me/avatar",
-    formData
+    formData,
+    {
+      headers: {
+        // Let axios set the proper boundary for multipart/form-data
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
   return response.data;
 };
