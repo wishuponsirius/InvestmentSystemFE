@@ -43,6 +43,10 @@ const UserProfile = () => {
         const name = resp.data?.orgName || resp.data?.name || "";
         setFullName(name);
         localStorage.setItem("displayName", name);
+        if (resp.data?.avatarUrl) {
+          localStorage.setItem("avatarUrl", resp.data.avatarUrl);
+          window.dispatchEvent(new Event("avatarUpdated"));
+        }
       }
     } catch (err) {
       console.error("Failed to fetch profile:", err);
@@ -97,6 +101,10 @@ const UserProfile = () => {
       if (resp.success) {
         showMessage("success", "Avatar updated successfully!");
         setUser(resp.data); // Update user profile with new avatarUrl
+        if (resp.data?.avatarUrl) {
+          localStorage.setItem("avatarUrl", resp.data.avatarUrl);
+          window.dispatchEvent(new Event("avatarUpdated"));
+        }
       } else {
         showMessage("error", resp.message || "Failed to upload avatar.");
       }
