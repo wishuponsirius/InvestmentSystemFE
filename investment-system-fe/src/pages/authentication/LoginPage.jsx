@@ -95,6 +95,10 @@ const LoginPage = () => {
     }
   };
 
+  const handleRegister = () => {
+    navigate("/register");
+  };
+
   return (
     <div className={styles.loginContainer}>
       <div className={styles.leftSide}>
@@ -163,7 +167,13 @@ const LoginPage = () => {
 
           <div className={styles.footerSection}>
             <p className={styles.footerText}>Don't have an account?</p>
-            <span className={styles.registerLink}>Register</span>
+            <span 
+              className={styles.registerLink}
+              onClick={handleRegister}
+              style={{ cursor: "pointer" }}
+            >
+              Register
+            </span>
           </div>
         </div>
       </div>
