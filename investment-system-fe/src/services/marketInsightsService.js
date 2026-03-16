@@ -54,6 +54,13 @@ const tryBackendGet = async (path) => {
   }
 };
 
+const fetchPremium = async () => {
+  const res = await tryBackendGet("/prices/premium");
+  if (!res.ok) return [];
+
+  return res.data || [];
+};
+
 const pickLatest = (rows) => (Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null);
 
 const normalizeDomesticGoldVnd = (value) => {
@@ -151,8 +158,8 @@ const mapBackendGoldProducts = (latestRow) => {
 const mapBackendSilverProducts = (latestRow, normalizeFactor = 1) => {
   if (!latestRow) return [];
 
-  const baseBuy = toNumber(latestRow?.buyPrice ?? latestRow?.buy) / normalizeFactor;
-  const baseSell = toNumber(latestRow?.sellPrice ?? latestRow?.sell) / normalizeFactor;
+  const baseBuy = toNumber(latestRow?.buyPrice ?? latestRow?.buy);
+  const baseSell = toNumber(latestRow?.sellPrice ?? latestRow?.sell);
   if (baseBuy <= 0 || baseSell <= 0) return [];
 
   const updated = latestRow?.timestamp || latestRow?.updateDate || "";
@@ -210,9 +217,7 @@ const alignSeries = ({ asset, vnRows, globalRows, currencyRows, usdToVnd, silver
     let sell = toNumber(item?.sellPrice ?? item?.sell ?? item?.sell_price);
     if (asset === "gold") {
       sell = normalizeDomesticGoldVnd(sell);
-    } else if (asset === "silver" && silverNormalizeFactor > 1) {
-      sell /= silverNormalizeFactor;
-    }
+    } 
     if (sell <= 0) continue;
     aligned[key] = {
       at: toDate(item?.timestamp || item?.updateDate || item?.update_date),
@@ -274,9 +279,16 @@ export const fetchMarketInsights = async (range = "1m") => {
   let worldGoldUsd = toNumber(lastInternational?.worldGoldUsd);
   let worldSilverUsd = toNumber(lastInternational?.worldSilverUsd);
   let usdToVnd = toNumber(lastExchangeRate);
+  let goldPremium = 0;
+  let silverPremium = 0;
 
   const backendDomesticGold = await tryBackendGet("/prices/vn-all/gold/1d");
   const backendDomesticSilver = await tryBackendGet("/prices/vn-all/silver/1w");
+  const premiumRows = await fetchPremium();
+  for (const row of premiumRows) {
+    if (row.assetId === 1) goldPremium = toNumber(row.premiumPrice);
+    if (row.assetId === 2) silverPremium = toNumber(row.premiumPrice);
+  }
 
   if (backendDomesticGold.ok) {
     productsGold = mapBackendGoldProducts(pickLatest(backendDomesticGold.data));
@@ -312,7 +324,7 @@ export const fetchMarketInsights = async (range = "1m") => {
   if (backendDomesticSilver.ok) {
     const latestSilver = pickLatest(backendDomesticSilver.data);
     const rawSilverSell = toNumber(latestSilver?.sellPrice ?? latestSilver?.sell);
-    lastSilverNormalizeFactor = inferSilverNormalizeFactor(rawSilverSell, currentWorldSilverVnd);
+    // lastSilverNormalizeFactor = inferSilverNormalizeFactor(rawSilverSell, currentWorldSilverVnd);
     productsSilver = mapBackendSilverProducts(latestSilver, lastSilverNormalizeFactor);
   }
 
@@ -356,6 +368,8 @@ export const fetchMarketInsights = async (range = "1m") => {
     goldSeries,
     silverSeries,
     currencySeries,
+    goldPremium,
+    silverPremium,
     apiErrors: {
       vietnam: productsGold.length === 0 && productsSilver.length === 0,
       international: worldGoldUsd <= 0 && worldSilverUsd <= 0,

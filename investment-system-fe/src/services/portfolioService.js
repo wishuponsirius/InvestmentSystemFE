@@ -13,15 +13,17 @@ const DISPLAY_ASSET = {
 };
 
 const DISPLAY_UNIT = {
-  "Chỉ": "Chi",
-  "Lượng": "Luong",
+  "Chỉ": "Chỉ",
+  "Lượng": "Lượng",
   Kilogram: "Kg",
+  "Currency Unit": "Currency",
 };
 
 const API_UNIT = {
   Chi: "Chỉ",
   Luong: "Lượng",
   Kg: "Kilogram",
+  "Currency Unit": "Currency Unit",
 };
 
 const toNumber = (value) => {
@@ -206,6 +208,37 @@ export const fetchPortfolioData = async () => {
     totalProfitLossPercentage: totalWealth > 0 ? (totalProfitLoss / totalWealth) * 100 : 0,
     holdings,
   };
+};
+
+export const fetchPortfolioAIAnalysis = async () => {
+  const userId = await resolveCurrentUserId();
+  if (!userId) throw new Error("User session is invalid. Please login again.");
+
+  try {
+    const response = await api.post(
+      `/portfolio/report/${userId}/generate`,
+      {}, // body (empty because endpoint doesn't require payload)
+      { headers: getHeaders() }
+    );
+
+    return response.data;
+  } catch (error) {
+  console.error("Portfolio AI analysis API failed:", error);
+  throw error;
+}
+};
+
+export const fetchLastPortfolioReport = async () => {
+  const userId = await resolveCurrentUserId();
+  if (!userId) throw new Error("User session is invalid. Please login again.");
+
+  const res = await tryGet(`/portfolio/report/${userId}`);
+
+  if (!res.ok || !res.data) {
+    throw new Error("Cannot load latest portfolio report.");
+  }
+
+  return res.data;
 };
 
 export const savePortfolioAsset = async ({ userId, asset, quantity, unitDisplay, entryPrice, currency }) => {

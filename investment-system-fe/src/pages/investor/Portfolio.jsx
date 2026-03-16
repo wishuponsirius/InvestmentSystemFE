@@ -78,6 +78,15 @@ const Portfolio = () => {
     setIsFormOpen(true);
   };
 
+  // When asset type changes, auto-adjust unit to a sensible default
+  const handleAssetChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      asset: value,
+      unitDisplay: value === "USD" ? "Currency Unit" : "Luong",
+    }));
+  };
+
   const handleSave = async (event) => {
     event.preventDefault();
     const quantity = Number(form.quantity);
@@ -109,7 +118,13 @@ const Portfolio = () => {
   };
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`Delete ${item.asset === "Gold" ? "SJC Gold" : "Phu Quy Silver"}?`)) return;
+    const label =
+      item.asset === "Gold"
+        ? "SJC Gold"
+        : item.asset === "Silver"
+        ? "Phu Quy Silver"
+        : "USD";
+    if (!window.confirm(`Delete ${label}?`)) return;
 
     setError("");
     try {
@@ -142,6 +157,32 @@ const Portfolio = () => {
     0,
   );
 
+  const getCardClass = (asset) => {
+    if (asset === "Gold") return styles.goldCard;
+    if (asset === "Silver") return styles.silverCard;
+    if (asset === "USD") return styles.usdCard;
+    return "";
+  };
+
+  const getSavePreviewLabel = () => {
+    if (form.asset === "Gold") return "SJC Gold";
+    if (form.asset === "Silver") return "Phu Quy Silver";
+    if (form.asset === "USD") return "USD";
+    return form.asset;
+  };
+
+  // Units available per asset type
+  const availableUnits =
+    form.asset === "USD"
+      ? [{ label: "Currency Unit", value: "Currency Unit" }]
+      : displayUnits.map((u) => ({ label: u, value: u }));
+
+  // Assets for the dropdown — extend displayAssets with USD
+  const allAssets = [
+    ...displayAssets,
+    { label: "USD", value: "USD" },
+  ];
+
   return (
     <div className={styles.pageWrapper}>
       <Header role="INVESTOR" />
@@ -169,20 +210,6 @@ const Portfolio = () => {
 
         {error && <p className={styles.errorText}>{error}</p>}
 
-        <div className={styles.summaryGrid}>
-          <div className={styles.summaryCard}>
-            <span className={styles.label}>Total Profit / Loss</span>
-            <h2 className={`${styles.value} ${convertedTotalProfitLoss >= 0 ? styles.positive : styles.negative}`}>
-              {convertedTotalProfitLoss >= 0 ? "+" : "-"}
-              {toDisplayMoney(Math.abs(convertedTotalProfitLoss), displayCurrency)}
-            </h2>
-            <span className={`${styles.subValue} ${totalProfitLossPercentage >= 0 ? styles.positive : styles.negative}`}>
-              {totalProfitLossPercentage >= 0 ? "+" : ""}
-              {totalProfitLossPercentage.toFixed(2)}%
-            </span>
-          </div>
-        </div>
-
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Your Holdings</h2>
@@ -196,7 +223,7 @@ const Portfolio = () => {
             {holdings.map((item, index) => (
               <div
                 key={item.portfolioId != null ? String(item.portfolioId) : `${item.asset}-${item.displayUnit}-${item.currency}-${index}`}
-                className={`${styles.holdingCard} ${item.asset === "Gold" ? styles.goldCard : styles.silverCard}`}
+                className={`${styles.holdingCard} ${getCardClass(item.asset)}`}
               >
                 <div>
                   <h3 className={styles.assetName}>{item.displayName}</h3>
@@ -211,27 +238,8 @@ const Portfolio = () => {
                     </p>
                   </div>
                   <div>
-                    <span className={styles.statLabel}>Avg. Cost</span>
+                    <span className={styles.statLabel}>Entry Price/Unit</span>
                     <p>{toDisplayMoney(item.entryPrice, item.currency)}</p>
-                  </div>
-                  <div>
-                    <span className={styles.statLabel}>Buy</span>
-                    <p>{toDisplayMoney(item.buyPrice ?? item.entryPrice, item.currency)}</p>
-                  </div>
-                  <div>
-                    <span className={styles.statLabel}>Sell</span>
-                    <p>{toDisplayMoney(item.sellPrice ?? item.entryPrice, item.currency)}</p>
-                  </div>
-                  <div>
-                    <span className={styles.statLabel}>Market Value</span>
-                    <p>{toDisplayMoney(item.marketValue, item.currency)}</p>
-                  </div>
-                  <div>
-                    <span className={styles.statLabel}>Net Profit</span>
-                    <p className={item.profitLoss >= 0 ? styles.pnlPositive : styles.pnlNegative}>
-                      {item.profitLoss >= 0 ? "+" : "-"}
-                      {toDisplayMoney(Math.abs(item.profitLoss), item.currency)}
-                    </p>
                   </div>
                 </div>
 
@@ -253,13 +261,13 @@ const Portfolio = () => {
             <form className={styles.modalCard} onSubmit={handleSave}>
               <h3 className={styles.modalTitle}>{editingAsset != null ? "Edit Asset" : "Record Transaction"}</h3>
 
-              <label className={styles.formLabel}>Metal Type</label>
+              <label className={styles.formLabel}>Asset Type</label>
               <select
                 className={styles.formInput}
                 value={form.asset}
-                onChange={(e) => setForm((prev) => ({ ...prev, asset: e.target.value }))}
+                onChange={(e) => handleAssetChange(e.target.value)}
               >
-                {displayAssets.map((item) => (
+                {allAssets.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
@@ -283,14 +291,14 @@ const Portfolio = () => {
                 value={form.unitDisplay}
                 onChange={(e) => setForm((prev) => ({ ...prev, unitDisplay: e.target.value }))}
               >
-                {displayUnits.map((unit) => (
-                  <option key={unit} value={unit}>
-                    {unit}
+                {availableUnits.map((unit) => (
+                  <option key={unit.value} value={unit.value}>
+                    {unit.label}
                   </option>
                 ))}
               </select>
 
-              <label className={styles.formLabel}>Receipt Price ({form.currency})</label>
+              <label className={styles.formLabel}>Entry Price Per Unit ({form.currency})</label>
               <input
                 className={styles.formInput}
                 type="number"
@@ -315,7 +323,7 @@ const Portfolio = () => {
               </select>
 
               <p className={styles.previewText}>
-                Saving as: {form.asset === "Gold" ? "SJC Gold" : "Phu Quy Silver"} - {form.unitDisplay} - {form.currency}
+                Saving as: {getSavePreviewLabel()} — {form.unitDisplay} — {form.currency}
               </p>
 
               <div className={styles.modalActions}>

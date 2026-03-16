@@ -10,6 +10,7 @@ const RANGES = ["1w", "1m", "1y"];
 const MiniLineChart = ({
   seriesA = [],
   seriesB = [],
+  dates = [],
   range = "1m",
   labelA = "Buy",
   labelB = "Sell",
@@ -27,9 +28,11 @@ const MiniLineChart = ({
 
   const min = Math.min(...merged);
   const max = Math.max(...merged);
+  const rangeChart = max - min || 1;
+  const maxWithPadding = max + rangeChart * 0.08; // 8% headroom
   const width = 900;
   const height = 240;
-  const pad = 20;
+  const pad = 50;
   const showPointDetails = points <= 30 && range !== "1y";
   const maxLabels = 7;
   const step = points > maxLabels ? Math.ceil(points / maxLabels) : 1;
@@ -38,9 +41,9 @@ const MiniLineChart = ({
 
   const scaleX = (i) => pad + (i * (width - pad * 2)) / Math.max(points - 1, 1);
   const scaleY = (v) => {
-    if (max === min) return height / 2;
-    return height - pad - ((v - min) * (height - pad * 2)) / (max - min);
-  };
+  if (maxWithPadding === min) return height / 2;
+  return height - pad - ((v - min) * (height - pad * 2)) / (maxWithPadding - min);
+};
 
   const toPath = (series) => {
     let path = "";
@@ -88,7 +91,12 @@ const MiniLineChart = ({
           );
         })
       : null;
-
+  
+  const formatDate = (d) => {
+    if (!d) return "";
+    const date = new Date(d);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
   const gridLines = [1, 2, 3, 4].map((line) => {
     const y = (height * line) / 5;
     return <line key={line} x1={0} y1={y} x2={width} y2={y} stroke="#d1d5db" strokeWidth="1" />;
@@ -140,6 +148,26 @@ const MiniLineChart = ({
     >
       {gridLines}
 
+      {/* X-axis date labels */}
+      {dates.map((d, i) => {
+        if (!d || i % step !== 0) return null;
+
+        const x = scaleX(i);
+
+        return (
+          <text
+            key={i}
+            x={x}
+            y={height - 2}
+            textAnchor="middle"
+            fontSize="11"
+            fill="#6b7280"
+          >
+            {formatDate(d)}
+          </text>
+        );
+      })}
+      
       <path
         d={toPath(seriesA)}
         fill="none"
@@ -191,7 +219,7 @@ const MiniLineChart = ({
 };
 
 const riskClass = (styles, risk) => {
-  if (risk === "High") return styles.badgeHighRisk;
+  if (risk === "High" || risk === "Extreme") return styles.badgeHighRisk;
   if (risk === "Medium") return "bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 rounded-full font-bold";
   return "bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold";
 };
@@ -331,11 +359,17 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
 
           <div className={styles.statCard}>
             <div className={styles.cardHeader}>
-              <span className={styles.cardLabel}>SPREAD GAP</span>
+              <span className={styles.cardLabel}>PREMIUM</span>
               <span className={riskClass(styles, spreadRisk)}>{spreadRisk} Risk</span>
             </div>
             <h2 className={styles.mainPrice}>
-              {numberFmt(spreadGap, 0)} VND <small>{activeTab === "FOREX" ? "" : "/ Ounce"}</small>
+              {numberFmt(spreadGap, 0)} VND <small>
+                {activeTab === "GOLD"
+                  ? " / Lượng"
+                  : activeTab === "SILVER"
+                    ? " / Kg"
+                    : ""}
+              </small>
             </h2>
             <p className={styles.riskDesc}>Gap compared with converted world benchmark.</p>
           </div>
@@ -376,20 +410,22 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
             </div>
           )}
           <div className={`${styles.chartPlaceholder} relative`}>
-            {!isLoading && activeTab === "GOLD" && (
+            {!isLoading && (activeTab === "GOLD" || activeTab === "SILVER") && (
               <p className="pointer-events-none absolute right-3 bottom-3 z-10 text-xs text-gray-500">
                 {selectedPriceType === "domestic"
-                  ? "Đơn vị: Triệu/Lượng"
+                  ? activeTab === "GOLD"
+                    ? "Đơn vị: Triệu/Lượng"
+                    : "Đơn vị: Triệu/Kg"
                   : "Đơn vị: Triệu/Ounce"}
               </p>
             )}
-
             {isLoading ? (
               <p className="text-gray-400 italic">Loading trend from API...</p>
             ) : (
               <MiniLineChart
                 seriesA={chartA}
                 seriesB={chartB}
+                dates={isGold ? goldSeries.dates : silverSeries.dates}
                 range={range}
                 labelA="Buy"
                 labelB="Sell"
