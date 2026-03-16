@@ -18,6 +18,7 @@ import {
   Globe,
   Play, // <-- Thêm Icon Play
 } from "lucide-react";
+import VirtualPet from "../../assets/virtual-pet/VirtualPet";
 
 const AdminDashboard = () => {
   const [role] = useState("ADMIN");
@@ -261,6 +262,7 @@ const AdminDashboard = () => {
           </div>
         </section>
       </main>
+      <VirtualPet />
       <Footer />
     </div>
   );
