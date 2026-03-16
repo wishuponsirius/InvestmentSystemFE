@@ -13,29 +13,40 @@ const toChartSeries = (alignedSeries, spread = 0) => {
   const buy = [];
   const sell = [];
   const world = [];
+  const worldBuy = [];
+  const worldSell = [];
 
   let lastSell = null;
   let lastWorld = null;
+  let lastWorldBuy = null;
+  let lastWorldSell = null;
 
   for (const item of alignedSeries || []) {
-    if (item?.domesticSell && item.domesticSell > 0) lastSell = item.domesticSell;
-    if (item?.worldVnd && item.worldVnd > 0) lastWorld = item.worldVnd;
-
-    if (lastSell != null) {
-      sell.push(lastSell / 1000000);
-      buy.push((lastSell - spread) / 1000000);
+    if (Number.isFinite(item?.domesticSell) && item.domesticSell > 0) {
+      lastSell = item.domesticSell / 1000000;
     }
 
-    if (lastWorld != null) world.push(lastWorld);
-
-    if (lastSell != null && lastWorld == null) world.push(0);
-    if (lastWorld != null && lastSell == null) {
-      sell.push(0);
-      buy.push(0);
+    if (Number.isFinite(item?.worldVnd) && item.worldVnd > 0) {
+      lastWorld = item.worldVnd;
     }
+
+    if (Number.isFinite(item?.worldBuyVnd) && item.worldBuyVnd > 0) {
+      lastWorldBuy = item.worldBuyVnd;
+    }
+
+    if (Number.isFinite(item?.worldSellVnd) && item.worldSellVnd > 0) {
+      lastWorldSell = item.worldSellVnd;
+    }
+
+    sell.push(lastSell);
+    buy.push(lastSell != null ? lastSell - spread / 1000000 : null);
+
+    world.push(lastWorld);
+    worldBuy.push(lastWorldBuy);
+    worldSell.push(lastWorldSell);
   }
 
-  return { buy, sell, world };
+  return { buy, sell, world, worldBuy, worldSell };
 };
 
 export const useMarketInsights = () => {

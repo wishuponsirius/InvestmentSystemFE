@@ -226,6 +226,8 @@ const alignSeries = ({ asset, vnRows, globalRows, currencyRows, usdToVnd, silver
     const key = getDateKey(item);
     if (!key) continue;
     const worldUsd = toNumber(item?.buyPrice ?? item?.buy ?? item?.price ?? item?.buy_price);
+    const worldBuyUsd = toNumber(item?.buyPrice ?? item?.buy ?? item?.buy_price);
+    const worldSellUsd = toNumber(item?.sellPrice ?? item?.sell ?? item?.sell_price);
     if (worldUsd <= 0) continue;
 
     const rate = historicalRates[key] || usdToVnd;
@@ -233,7 +235,11 @@ const alignSeries = ({ asset, vnRows, globalRows, currencyRows, usdToVnd, silver
       at: aligned[key]?.at || toDate(item?.timestamp || item?.updateDate || item?.update_date),
       domesticSell: aligned[key]?.domesticSell ?? null,
       worldUsd,
+      worldBuyUsd: worldBuyUsd > 0 ? worldBuyUsd : aligned[key]?.worldBuyUsd ?? null,
+      worldSellUsd: worldSellUsd > 0 ? worldSellUsd : aligned[key]?.worldSellUsd ?? null,
       worldVnd: rate > 0 ? (worldUsd * rate) / 1000000 : null,
+      worldBuyVnd: rate > 0 && worldBuyUsd > 0 ? (worldBuyUsd * rate) / 1000000 : null,
+      worldSellVnd: rate > 0 && worldSellUsd > 0 ? (worldSellUsd * rate) / 1000000 : null,
     };
   }
 
