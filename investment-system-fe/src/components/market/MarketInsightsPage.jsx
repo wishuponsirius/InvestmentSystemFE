@@ -7,34 +7,63 @@ import { numberFmt } from "../../services/marketInsightsService";
 
 const RANGES = ["1w", "1m", "1y"];
 
-const MiniLineChart = ({ seriesA = [], seriesB = [], range = "1m" }) => {
+const MiniLineChart = ({
+  seriesA = [],
+  seriesB = [],
+  dates = [],
+  range = "1m",
+  labelA = "Buy",
+  labelB = "Sell",
+}) => {
+  const [hovered, setHovered] = React.useState(null);
   const points = Math.max(seriesA.length, seriesB.length);
   if (!points || points < 2) {
     return <p className="text-gray-400 italic">No chart points from API yet.</p>;
   }
 
   const merged = [...seriesA, ...seriesB].filter((x) => Number.isFinite(x));
+  if (!merged.length) {
+    return <p className="text-gray-400 italic">No chart points from API yet.</p>;
+  }
+
   const min = Math.min(...merged);
   const max = Math.max(...merged);
+  const rangeChart = max - min || 1;
+  const maxWithPadding = max + rangeChart * 0.08; // 8% headroom
   const width = 900;
   const height = 240;
-  const pad = 20;
+  const pad = 50;
   const showPointDetails = points <= 30 && range !== "1y";
   const maxLabels = 7;
   const step = points > maxLabels ? Math.ceil(points / maxLabels) : 1;
 
+
+
   const scaleX = (i) => pad + (i * (width - pad * 2)) / Math.max(points - 1, 1);
   const scaleY = (v) => {
-    if (max === min) return height / 2;
-    return height - pad - ((v - min) * (height - pad * 2)) / (max - min);
+  if (maxWithPadding === min) return height / 2;
+  return height - pad - ((v - min) * (height - pad * 2)) / (maxWithPadding - min);
+};
+
+  const toPath = (series) => {
+    let path = "";
+    let started = false;
+
+    series.forEach((value, i) => {
+      if (!Number.isFinite(value)) {
+        started = false;
+        return;
+      }
+
+      const command = started ? "L" : "M";
+      path += `${command} ${scaleX(i)} ${scaleY(value)} `;
+      started = true;
+    });
+
+    return path.trim();
   };
 
-  const toPath = (series) =>
-    series
-      .map((value, i) => `${i === 0 ? "M" : "L"} ${scaleX(i)} ${scaleY(value)}`)
-      .join(" ");
-
-  const renderSeriesDetails = (series, color) =>
+  const renderSeriesDetails = (series, color, isDimmed = false) =>
     showPointDetails
       ? series.map((value, i) => {
           if (!Number.isFinite(value)) return null;
@@ -44,7 +73,7 @@ const MiniLineChart = ({ seriesA = [], seriesB = [], range = "1m" }) => {
           const labelY = i % 2 === 0 ? y - 14 : y + 18;
 
           return (
-            <g key={`${color}-${i}`}>
+            <g key={`${color}-${i}`} opacity={isDimmed ? 0.35 : 1}>
               <circle cx={x} cy={y} r="4" fill={color} />
               {shouldShowLabel && (
                 <text
@@ -62,21 +91,127 @@ const MiniLineChart = ({ seriesA = [], seriesB = [], range = "1m" }) => {
           );
         })
       : null;
-
+  
+  const formatDate = (d) => {
+    if (!d) return "";
+    const date = new Date(d);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
   const gridLines = [1, 2, 3, 4].map((line) => {
     const y = (height * line) / 5;
     return <line key={line} x1={0} y1={y} x2={width} y2={y} stroke="#d1d5db" strokeWidth="1" />;
   });
 
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * width;
+    const mouseY = ((e.clientY - rect.top) / rect.height) * height;
+
+    const index = Math.round(((mouseX - pad) / (width - pad * 2)) * Math.max(points - 1, 1));
+    const clampedIndex = Math.max(0, Math.min(points - 1, index));
+
+    const a = Number.isFinite(seriesA[clampedIndex]) ? seriesA[clampedIndex] : null;
+    const b = Number.isFinite(seriesB[clampedIndex]) ? seriesB[clampedIndex] : null;
+
+    const yA = a != null ? scaleY(a) : null;
+    const yB = b != null ? scaleY(b) : null;
+
+    let activeLine = null;
+    if (yA != null && yB != null) {
+      activeLine = Math.abs(mouseY - yA) <= Math.abs(mouseY - yB) ? "A" : "B";
+    } else if (yA != null) {
+      activeLine = "A";
+    } else if (yB != null) {
+      activeLine = "B";
+    }
+
+    setHovered({
+      index: clampedIndex,
+      x: scaleX(clampedIndex),
+      a,
+      b,
+      activeLine,
+    });
+  };
+
+  const handleMouseLeave = () => setHovered(null);
+
+  const dimA = hovered?.activeLine === "B";
+  const dimB = hovered?.activeLine === "A";
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-56 bg-gray-50 rounded-lg border border-gray-100">
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full h-56 bg-gray-50 rounded-lg border border-gray-100"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
       {gridLines}
-      <path d={toPath(seriesA)} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
-      {renderSeriesDetails(seriesA, "#2563eb")}
+
+      {/* X-axis date labels */}
+      {dates.map((d, i) => {
+        if (!d || i % step !== 0) return null;
+
+        const x = scaleX(i);
+
+        return (
+          <text
+            key={i}
+            x={x}
+            y={height - 2}
+            textAnchor="middle"
+            fontSize="11"
+            fill="#6b7280"
+          >
+            {formatDate(d)}
+          </text>
+        );
+      })}
+      
+      <path
+        d={toPath(seriesA)}
+        fill="none"
+        stroke="#2563eb"
+        strokeWidth={hovered?.activeLine === "A" ? "5" : "3"}
+        strokeLinecap="round"
+        opacity={dimA ? 0.3 : 1}
+      />
+      {renderSeriesDetails(seriesA, "#2563eb", dimA)}
+
       {seriesB.length > 0 && (
         <>
-          <path d={toPath(seriesB)} fill="none" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" />
-          {renderSeriesDetails(seriesB, "#dc2626")}
+          <path
+            d={toPath(seriesB)}
+            fill="none"
+            stroke="#dc2626"
+            strokeWidth={hovered?.activeLine === "B" ? "5" : "3"}
+            strokeLinecap="round"
+            opacity={dimB ? 0.3 : 1}
+          />
+          {renderSeriesDetails(seriesB, "#dc2626", dimB)}
+        </>
+      )}
+
+      {hovered && (
+        <>
+          <line
+            x1={hovered.x}
+            y1={pad}
+            x2={hovered.x}
+            y2={height - pad}
+            stroke="#9ca3af"
+            strokeDasharray="4 4"
+          />
+
+          <g transform={`translate(${Math.min(hovered.x + 10, width - 140)}, ${pad + 10})`}>
+            <rect width="130" height="52" rx="8" fill="white" stroke="#d1d5db" />
+            <text x="10" y="20" fontSize="12" fontWeight="700" fill="#2563eb">
+              {labelA}: {hovered.a != null ? hovered.a.toFixed(2) : "N/A"}
+            </text>
+            <text x="10" y="38" fontSize="12" fontWeight="700" fill="#dc2626">
+              {labelB}: {hovered.b != null ? hovered.b.toFixed(2) : "N/A"}
+            </text>
+          </g>
         </>
       )}
     </svg>
@@ -84,7 +219,7 @@ const MiniLineChart = ({ seriesA = [], seriesB = [], range = "1m" }) => {
 };
 
 const riskClass = (styles, risk) => {
-  if (risk === "High") return styles.badgeHighRisk;
+  if (risk === "High" || risk === "Extreme") return styles.badgeHighRisk;
   if (risk === "Medium") return "bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 rounded-full font-bold";
   return "bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold";
 };
@@ -146,23 +281,24 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
       : "domestic";
 
   const chartA = isGold
+  ? selectedPriceType === "domestic"
+    ? goldSeries.buy
+    : goldSeries.worldBuy
+  : isSilver
     ? selectedPriceType === "domestic"
-      ? goldSeries.buy
-      : goldSeries.world
-    : isSilver
-      ? selectedPriceType === "domestic"
-        ? silverSeries.buy
-        : silverSeries.world
-      : currencySeries;
+      ? silverSeries.buy
+      : silverSeries.worldBuy
+    : currencySeries;
+
   const chartB = isGold
+  ? selectedPriceType === "domestic"
+    ? goldSeries.sell
+    : goldSeries.worldSell
+  : isSilver
     ? selectedPriceType === "domestic"
-      ? goldSeries.sell
-      : []
-    : isSilver
-      ? selectedPriceType === "domestic"
-        ? silverSeries.sell
-        : []
-      : [];
+      ? silverSeries.sell
+      : silverSeries.worldSell
+    : [];
 
   const priceRows = isGold ? productsGold : isSilver ? productsSilver : [];
 
@@ -190,7 +326,11 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
             <span className={styles.cardLabel}>{activeTab === "FOREX" ? "Exchange Rate" : "Domestic Price"}</span>
             <h2 className={styles.mainPrice}>
               {numberFmt(domesticSell, activeTab === "FOREX" ? 2 : 0)} {activeTab === "FOREX" ? "VND" : "VND"}
-              <small>{activeTab === "FOREX" ? " / USD" : " / Ounce"}</small>
+              <small>{activeTab === "FOREX"
+                  ? " / USD"
+                  : activeTab === "SILVER"
+                  ? " / Kg"
+                  : " / Lượng"}</small>
             </h2>
             <div className={styles.priceSub}>
               <span>Buy: {numberFmt(domesticBuy, activeTab === "FOREX" ? 2 : 0)} VND</span>
@@ -219,11 +359,17 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
 
           <div className={styles.statCard}>
             <div className={styles.cardHeader}>
-              <span className={styles.cardLabel}>SPREAD GAP</span>
+              <span className={styles.cardLabel}>PREMIUM</span>
               <span className={riskClass(styles, spreadRisk)}>{spreadRisk} Risk</span>
             </div>
             <h2 className={styles.mainPrice}>
-              {numberFmt(spreadGap, 0)} VND <small>{activeTab === "FOREX" ? "" : "/ Ounce"}</small>
+              {numberFmt(spreadGap, 0)} VND <small>
+                {activeTab === "GOLD"
+                  ? " / Lượng"
+                  : activeTab === "SILVER"
+                    ? " / Kg"
+                    : ""}
+              </small>
             </h2>
             <p className={styles.riskDesc}>Gap compared with converted world benchmark.</p>
           </div>
@@ -263,21 +409,39 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
               </button>
             </div>
           )}
-          <div className={styles.chartPlaceholder}>
-            {isLoading ? <p className="text-gray-400 italic">Loading trend from API...</p> : <MiniLineChart seriesA={chartA} seriesB={chartB} range={range} />}
+          <div className={`${styles.chartPlaceholder} relative`}>
+            {!isLoading && (activeTab === "GOLD" || activeTab === "SILVER") && (
+              <p className="pointer-events-none absolute right-3 bottom-3 z-10 text-xs text-gray-500">
+                {selectedPriceType === "domestic"
+                  ? activeTab === "GOLD"
+                    ? "Unit: M/Lượng"
+                    : "Unit: M/Kg"
+                  : "Unit: M/Ounce"}
+              </p>
+            )}
+            {isLoading ? (
+              <p className="text-gray-400 italic">Loading trend from API...</p>
+            ) : (
+              <MiniLineChart
+                seriesA={chartA}
+                seriesB={chartB}
+                dates={isGold ? goldSeries.dates : silverSeries.dates}
+                range={range}
+                labelA="Buy"
+                labelB="Sell"
+              />
+            )}
           </div>
           {activeTab !== "FOREX" && (
             <div className="mt-3 flex items-center justify-center gap-6 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full bg-blue-600" />
-                <span>{selectedPriceType === "domestic" ? "Buy Price" : "International"}</span>
+                <span>{selectedPriceType === "domestic" ? "Buy Price" : "International Buy"}</span>
               </div>
-              {selectedPriceType === "domestic" && (
-                <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-red-600" />
-                  <span>Sell Price</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-red-600" />
+                <span>{selectedPriceType === "domestic" ? "Sell Price" : "International Sell"}</span>
+              </div>
             </div>
           )}
         </div>

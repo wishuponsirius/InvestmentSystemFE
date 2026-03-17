@@ -13,29 +13,44 @@ const toChartSeries = (alignedSeries, spread = 0) => {
   const buy = [];
   const sell = [];
   const world = [];
+  const worldBuy = [];
+  const worldSell = [];
+  const dates = [];
 
   let lastSell = null;
   let lastWorld = null;
+  let lastWorldBuy = null;
+  let lastWorldSell = null;
 
   for (const item of alignedSeries || []) {
-    if (item?.domesticSell && item.domesticSell > 0) lastSell = item.domesticSell;
-    if (item?.worldVnd && item.worldVnd > 0) lastWorld = item.worldVnd;
 
-    if (lastSell != null) {
-      sell.push(lastSell / 1000000);
-      buy.push((lastSell - spread) / 1000000);
+    dates.push(item?.at ?? null);
+    
+    if (Number.isFinite(item?.domesticSell) && item.domesticSell > 0) {
+      lastSell = item.domesticSell / 1000000;
     }
 
-    if (lastWorld != null) world.push(lastWorld);
-
-    if (lastSell != null && lastWorld == null) world.push(0);
-    if (lastWorld != null && lastSell == null) {
-      sell.push(0);
-      buy.push(0);
+    if (Number.isFinite(item?.worldVnd) && item.worldVnd > 0) {
+      lastWorld = item.worldVnd;
     }
+
+    if (Number.isFinite(item?.worldBuyVnd) && item.worldBuyVnd > 0) {
+      lastWorldBuy = item.worldBuyVnd;
+    }
+
+    if (Number.isFinite(item?.worldSellVnd) && item.worldSellVnd > 0) {
+      lastWorldSell = item.worldSellVnd;
+    }
+
+    sell.push(lastSell);
+    buy.push(lastSell != null ? lastSell - spread / 1000000 : null);
+
+    world.push(lastWorld);
+    worldBuy.push(lastWorldBuy);
+    worldSell.push(lastWorldSell);
   }
 
-  return { buy, sell, world };
+  return { buy, sell, world, worldBuy, worldSell, dates };
 };
 
 export const useMarketInsights = () => {
@@ -88,11 +103,20 @@ export const useMarketInsights = () => {
     const worldGoldVnd = Number(data?.worldGoldVnd || 0);
     const worldSilverVnd = Number(data?.worldSilverVnd || 0);
 
-    const goldSpreadGap = Math.abs((sjc?.sell || 0) - worldGoldVnd);
-    const goldRisk = goldSpreadGap > 1500000 ? "High" : goldSpreadGap > 500000 ? "Medium" : "Low";
+    const goldSpreadGap = Number(data?.goldPremium || 0);
+    // NEW 2026 Thresholds for Gold (VND/lượng)
+    const goldRisk = 
+      goldSpreadGap > 18000000 ? "Extreme" : // Above 18M: Bubble territory
+      goldSpreadGap > 12000000 ? "High" :    // 12M - 18M: High scarcity/intervention risk
+      goldSpreadGap > 5000000  ? "Medium" :  // 5M - 12M: Standard market premium
+      "Low";                                 // Below 5M: Very stable (rare in 2026)
 
-    const silverSpreadGap = Math.abs((silverBase?.sell || 0) - worldSilverVnd);
-    const silverRisk = silverSpreadGap > 1000000 ? "High" : "Low";
+    const silverSpreadGap = Number(data?.silverPremium || 0);
+    // NEW 2026 Thresholds for Silver (VND/kg)
+    const silverRisk = 
+      silverSpreadGap > 8000000 ? "High" :   // High speculative gap
+      silverSpreadGap > 3000000 ? "Medium" : // Healthy industrial/investment demand
+      "Low";
 
     return {
       sjc,
