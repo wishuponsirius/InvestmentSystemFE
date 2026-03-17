@@ -1,35 +1,161 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Hook để chuyển trang
+import { useNavigate } from "react-router-dom";
+import axios from "axios"; // Import Axios
 import styles from "./LoginPage.module.css";
 import { FaFacebook, FaTwitter } from "react-icons/fa";
 import goldImage from "../../assets/image/gold-coin.png";
-import { MOCK_USERS } from "../../mockup/mockUser";
+import * as userService from "../../services/userService";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError(""); // Reset lỗi
+    setIsLoading(true);
 
-    // Tìm kiếm user trong đống dữ liệu cứng
-    const user = MOCK_USERS.find(
-      (u) => u.email === email && u.password === password,
-    );
+    try {
+      // Gọi API bằng Axios
+      const response = await axios.post("http://localhost:8080/auth/login", {
+        contactEmail: email, // Key theo chuẩn của Swagger UI
+        password: password,
+      });
 
-    if (user) {
-      if (user.role === "admin") {
-        navigate("/admin-dashboard"); // Chuyển sang Admin nếu đúng role
-      } else if (user.role === "investor") {
-        navigate("/investor-dashboard");
-      } else {
-        alert("Chào Investor! Trang của bạn đang được xây dựng.");
+      // Axios tự động parse JSON; payload thực tế có thể nằm trong response.data.data
+      const payload = response.data?.data || response.data;
+
+      // Lưu Token vào localStorage (bạn kiểm tra lại tên field trả về từ backend nhé)
+      if (payload.accessToken) {
+        localStorage.setItem("accessToken", payload.accessToken);
       }
-    } else {
-      setError("Email hoặc mật khẩu không đúng rồi bro!");
+      if (payload.refreshToken) {
+        localStorage.setItem("refreshToken", payload.refreshToken);
+      }
+
+      const userId =
+        payload.userId ||
+        payload.user?.id ||
+        payload.id ||
+        "";
+      if (userId) {
+        localStorage.setItem("userId", String(userId));
+      }
+
+      // Nếu backend không trả tên hiển thị, thử decode từ accessToken
+      let displayName =
+        payload.displayName ||
+        payload.name ||
+        payload.orgName ||
+        payload.user?.name ||
+        payload.user?.orgName;
+
+      if (!displayName && payload.accessToken) {
+        try {
+          const parts = payload.accessToken.split(".");
+          if (parts.length === 3) {
+            const jwtPayload = JSON.parse(atob(parts[1]));
+            displayName =
+              jwtPayload?.username ||
+              jwtPayload?.preferred_username ||
+              jwtPayload?.orgName ||
+              jwtPayload?.name ||
+              jwtPayload?.email ||
+              jwtPayload?.sub;
+          }
+        } catch (err) {
+          // ignore decode errors
+        }
+      }
+
+      if (displayName) {
+        localStorage.setItem("displayName", displayName);
+      }
+      // Clear avatar to avoid showing previous user's picture after login
+      localStorage.removeItem("avatarUrl");
+
+      // If we can fetch user profile, use it to get the most up-to-date avatar (and name)
+      try {
+        const profileResp = await userService.getUserProfile();
+        if (profileResp.success && profileResp.data) {
+          const profile = profileResp.data;
+          const name = profile.orgName || profile.name || "";
+          const avatar = profile.avatarUrl || "";
+          if (name) localStorage.setItem("displayName", name);
+          if (avatar) localStorage.setItem("avatarUrl", avatar);
+        }
+      } catch (e) {
+        // Ignore - we already have a minimal display name set above.
+      }
+
+      // Thông báo cho các component khác rằng auth đã thay đổi
+      window.dispatchEvent(new Event("authChanged"));
+
+      // Xử lý chuyển trang dựa trên Role
+      // Không mặc định thành 'admin' nếu backend không trả role.
+      let userRole = payload.role;
+
+      // Thêm một số fallback phổ biến từ API: payload.user.role hoặc payload.roles
+      if (!userRole && payload.user && payload.user.role) {
+        userRole = payload.user.role;
+      }
+      if (!userRole && Array.isArray(payload.roles) && payload.roles.length > 0) {
+        userRole = payload.roles[0];
+      }
+
+      // Nếu backend chỉ trả token, cố decode payload từ accessToken (JWT) để lấy role
+      if (!userRole && payload.accessToken) {
+        try {
+          const parts = payload.accessToken.split('.');
+          if (parts.length === 3) {
+            const jwtPayload = JSON.parse(atob(parts[1]));
+            userRole = jwtPayload.role || (Array.isArray(jwtPayload.roles) && jwtPayload.roles[0]);
+          }
+        } catch {
+          // ignore decode errors
+        }
+      }
+
+      // Nếu vẫn không có role, coi là GUEST thay vì mặc định admin
+      if (!userRole) {
+        userRole = "GUEST";
+      }
+
+      const roleLower = String(userRole).toLowerCase();
+      if (roleLower === "admin") {
+        navigate("/admin-dashboard");
+      } else if (roleLower === "institution") {
+        navigate("/investor-dashboard");
+      } else if (roleLower === "guest" || roleLower === "user") {
+        navigate("/guest-dashboard");
+      } else {
+        alert("Hello! Your page is under construction.");
+      }
+    } catch (err) {
+      // Bắt lỗi từ Axios
+      if (err.response) {
+        // Lỗi do server trả về (vd: 401 Unauthorized, 400 Bad Request)
+        // Thường backend sẽ có kèm message lỗi trong err.response.data.message
+        setError(
+          err.response.data?.message || "Email or Password is incorrect!",
+        );
+      } else if (err.request) {
+        // Lỗi không nhận được phản hồi (server sập, mất mạng)
+        setError("Cannot connect to server. Please try again later.");
+      } else {
+        // Lỗi lúc setup request
+        setError("An error occurred during login.");
+      }
+    } finally {
+      setIsLoading(false); // Tắt trạng thái loading
     }
+  };
+
+  const handleRegister = () => {
+    navigate("/register");
   };
 
   return (
@@ -75,6 +201,7 @@ const LoginPage = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {/* Vùng hiển thị lỗi */}
               {error && (
                 <p className="text-red-500 text-[10px] mt-2 ml-1 italic">
                   {error}
@@ -82,8 +209,12 @@ const LoginPage = () => {
               )}
             </div>
 
-            <button type="submit" className={styles.loginBtn}>
-              Login
+            <button
+              type="submit"
+              className={styles.loginBtn}
+              disabled={isLoading}
+            >
+              {isLoading ? "Logging in..." : "Login"}
             </button>
           </form>
 
@@ -95,7 +226,13 @@ const LoginPage = () => {
 
           <div className={styles.footerSection}>
             <p className={styles.footerText}>Don't have an account?</p>
-            <span className={styles.registerLink}>Register</span>
+            <span 
+              className={styles.registerLink}
+              onClick={handleRegister}
+              style={{ cursor: "pointer" }}
+            >
+              Register
+            </span>
           </div>
         </div>
       </div>

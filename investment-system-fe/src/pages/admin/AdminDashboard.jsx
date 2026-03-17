@@ -1,184 +1,393 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import Header from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
 import styles from "../../pages/admin/AdminDashboard.module.css";
+import {
+  Activity,
+  RefreshCcw,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Coins,
+  Gem,
+  Globe,
+  Play, // <-- Thêm Icon Play
+} from "lucide-react";
+import VirtualPet from "../../assets/virtual-pet/VirtualPet";
 
 const AdminDashboard = () => {
   const [role] = useState("ADMIN");
+  const [healthData, setHealthData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterCategory, setFilterCategory] = useState("ALL");
+  const itemsPerPage = 10;
+
+  const navigate = useNavigate();
+
+  const fetchHealth = async () => {
+    try {
+      setApiError(null);
+      const token = localStorage.getItem("accessToken");
+      const config = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : {};
+      const response = await axios.get(
+        "http://localhost:8080/ingest/health",
+        config,
+      );
+      if (response.data) setHealthData(response.data);
+    } catch (error) {
+      console.error("Error fetching health data:", error);
+      if (error.response?.status === 401) {
+        setApiError("Unauthorized. Redirecting...");
+        localStorage.removeItem("accessToken");
+        setTimeout(() => navigate("/login"), 1000);
+        return;
+      }
+      setApiError("System monitor is temporarily unavailable.");
+      setHealthData({ status: "error", jobs: {}, stale_data: {} });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const allJobs = useMemo(() => {
+    if (!healthData?.jobs) return [];
+    return Object.entries(healthData.jobs);
+  }, [healthData]);
+
+  const stats = useMemo(() => {
+    return {
+      gold: allJobs.filter(([key]) => key.startsWith("gold")).length,
+      silver: allJobs.filter(([key]) => key.startsWith("silver")).length,
+      forex: allJobs.filter(([key]) => key.startsWith("forex")).length,
+    };
+  }, [allJobs]);
+
+  const filteredJobs = useMemo(() => {
+    if (filterCategory === "ALL") return allJobs;
+    return allJobs.filter(([key]) =>
+      key.startsWith(filterCategory.toLowerCase()),
+    );
+  }, [allJobs, filterCategory]);
+
+  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+  const currentJobs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredJobs.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredJobs, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
+  };
+
+  const handleFilterChange = (cat) => {
+    setFilterCategory(cat);
+    setCurrentPage(1);
+  };
+
+  const isAllFresh = useMemo(() => {
+    if (!healthData?.stale_data) return true;
+    return Object.values(healthData.stale_data).every((v) => {
+      if (typeof v === "boolean") return v === false;
+      if (typeof v === "object" && v !== null)
+        return Object.values(v).every((val) => val === false);
+      return true;
+    });
+  }, [healthData]);
+
+  if (isLoading) {
+    return (
+      <div className={styles.loadingWrapper}>
+        <Loader2 className="animate-spin text-[#FFDA91]" size={40} />
+        <p>Loading System Metrics...</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.pageWrapper}>
       <Header role={role} />
-
       <main className={styles.mainContent}>
-        {/* Section 1: Health */}
-        <section>
-          <h2 className={styles.sectionTitle}>System Health Overview</h2>
-          <div className={styles.healthGrid}>
+        {apiError && (
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-8 rounded-r-xl flex items-center gap-3">
+            <AlertTriangle className="text-amber-600" size={20} />
+            <span className="text-amber-800 text-sm font-medium">
+              {apiError}
+            </span>
+          </div>
+        )}
+
+        <section className="mb-12">
+          <h2 className={styles.sectionTitle}>
+            <Activity size={20} className="text-[#FFDA91]" /> System Health
+            Overview
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <HealthCard
-              title="Java Backend Core"
-              desc="Operational and stable, processing all requests efficiently."
+              title="Status"
+              value={healthData?.status || "OFFLINE"}
+              status={healthData?.status === "running" ? "success" : "error"}
+              isLive={healthData?.status === "running"}
+              icon={<Activity size={18} className="text-blue-500" />}
             />
             <HealthCard
-              title="Python Data Crawler"
-              desc="Actively fetching real-time market data without interruptions."
+              title="Total Jobs"
+              value={allJobs.length}
+              icon={<CheckCircle2 size={18} className="text-green-500" />}
             />
             <HealthCard
-              title="Database Connection"
-              desc="Secure and consistent connectivity, ensuring data integrity."
+              title="Data Freshness"
+              value={isAllFresh ? "FRESH" : "STALE"}
+              status={isAllFresh ? "success" : "warning"}
+              icon={<AlertTriangle size={18} className="text-orange-500" />}
+            />
+            <HealthCard
+              title="Gold Jobs"
+              value={stats.gold}
+              icon={<Coins size={18} className="text-yellow-500" />}
+            />
+            <HealthCard
+              title="Silver Jobs"
+              value={stats.silver}
+              icon={<Gem size={18} className="text-gray-400" />}
+            />
+            <HealthCard
+              title="Forex Jobs"
+              value={stats.forex}
+              icon={<Globe size={18} className="text-green-700" />}
             />
           </div>
         </section>
 
-        {/* Section 2: Management Table */}
         <section>
-          <h2 className={styles.sectionTitle}>Data Source Management</h2>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h2 className={styles.sectionTitle}>
+              <Activity size={20} className="text-[#FFDA91]" /> Detailed Job
+              Monitor
+            </h2>
+
+            <div className="flex items-center gap-3 bg-white p-1.5 rounded-xl border border-gray-100 shadow-sm">
+              <div className="pl-3 text-gray-400">
+                <Filter size={14} />
+              </div>
+              {["ALL", "GOLD", "SILVER", "FOREX"].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => handleFilterChange(cat)}
+                  className={`${styles.filterBtn} ${filterCategory === cat ? styles.activeFilter : ""}`}
+                >
+                  {cat}
+                </button>
+              ))}
+              <div className="w-[1px] h-4 bg-gray-200 mx-1"></div>
+              <button className={styles.refreshBtn} onClick={fetchHealth}>
+                <RefreshCcw size={14} /> Refresh All
+              </button>
+            </div>
+          </div>
+
           <div className={styles.tableContainer}>
             <table className={styles.managementTable}>
               <thead className={styles.tableHeader}>
                 <tr>
-                  <th className="px-6 py-4">Source Name</th>
-                  <th className="px-6 py-4">Type</th>
-                  <th className="px-6 py-4">Description</th>
-                  <th className="px-6 py-4">Last Sync</th>
-                  <th className="px-6 py-4">Status</th>
+                  <th>Job Name</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Last Sync (UTC)</th>
+                  <th>Integrity</th>
+                  <th className="text-center">Action</th> {/* <-- Cột mới */}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                <TableRow
-                  name="SJC"
-                  type="Market Price Feed"
-                  desc="Local gold market..."
-                  sync="2 mins ago"
-                  active
-                />
-                <TableRow
-                  name="Kitco"
-                  type="Global Price Feed"
-                  desc="International metals..."
-                  sync="1 hour ago"
-                  active
-                />
-                <TableRow
-                  name="PNJ"
-                  type="Market Price Feed"
-                  desc="Local jewelry..."
-                  sync="10 mins ago"
-                />
-                <TableRow
-                  name="LBMA"
-                  type="Global Price Feed"
-                  desc="London Bullion..."
-                  sync="30 mins ago"
-                  active
-                />
-                <TableRow
-                  name="CFTC"
-                  type="Regulatory Data"
-                  desc="Commodity Futures..."
-                  sync="6 hours ago"
-                />
+              <tbody>
+                {currentJobs.length > 0 ? (
+                  currentJobs.map(([key, value]) => (
+                    <TableRow
+                      key={key}
+                      id={key}
+                      data={value}
+                      staleData={healthData?.stale_data}
+                      onRefresh={fetchHealth} // <-- Truyền hàm fetchHealth xuống để load lại data sau khi trigger
+                    />
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="text-center py-20 text-gray-400 italic"
+                    >
+                      No jobs found matching "{filterCategory}"
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
-          </div>
-        </section>
 
-        {/* Section 3: Crawler Status */}
-        <section>
-          <h2 className={styles.sectionTitle}>Crawler Status Overview</h2>
-          <div className={styles.crawlerGrid}>
-            <CrawlerCard
-              name="SJC Scraper"
-              lastRun="12s ago"
-              success="99.8%"
-              fetched="2.5M"
-              price="85,000,000"
-            />
-            <CrawlerCard
-              name="PNJ Scraper"
-              lastRun="2m ago"
-              success="99.9%"
-              fetched="1.8M"
-              price="78,500,000"
-            />
-            <CrawlerCard
-              name="Kitco API"
-              lastRun="1h ago"
-              success="95.1%"
-              fetched="5.1M"
-              price="1,980.20 USD"
-              isHot
-            />
-            <CrawlerCard
-              name="Forex API"
-              lastRun="30s ago"
-              success="100%"
-              fetched="12.3M"
-              price="1.0850 EUR/USD"
-            />
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className={styles.pageInfo}>
+                  Page <strong>{currentPage}</strong> of{" "}
+                  <strong>{totalPages}</strong>
+                </span>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </main>
-
+      <VirtualPet />
       <Footer />
     </div>
   );
 };
 
-// --- Sub-components (Dùng nội bộ cho gọn) ---
-
-const HealthCard = ({ title, desc }) => (
-  <div className={styles.healthCard}>
-    <h3 className="font-bold text-gray-800 mb-3">{title}</h3>
-    <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
-  </div>
-);
-
-const TableRow = ({ name, type, desc, sync, active }) => (
-  <tr className="hover:bg-gray-50 transition-colors">
-    <td className="px-6 py-4 font-bold text-gray-800">{name}</td>
-    <td className="px-6 py-4 text-[11px] font-medium text-gray-400">{type}</td>
-    <td className="px-6 py-4 text-[11px] text-gray-400 max-w-xs truncate">
-      {desc}
-    </td>
-    <td className="px-6 py-4 text-[11px] text-gray-400">{sync}</td>
-    <td className="px-6 py-4">
-      <div
-        className={`${styles.toggleBg} ${active ? "bg-[#FFDA91]" : "bg-gray-200"}`}
-      >
-        <div
-          className={`${styles.toggleCircle} ${active ? "right-1" : "left-1"}`}
-        />
+const HealthCard = ({ title, value, status, isLive, icon }) => (
+  <div
+    className={`${styles.healthCard} ${status === "error" ? styles.borderError : ""}`}
+  >
+    <div className="flex justify-between items-start mb-2">
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+          {title}
+        </span>
       </div>
-    </td>
-  </tr>
-);
-
-const CrawlerCard = ({ name, lastRun, success, price, isHot }) => (
-  <div className={styles.crawlerCard}>
-    <div className="flex justify-between items-start mb-4">
-      <h4 className="font-bold text-gray-800 text-sm">{name}</h4>
-      {isHot && <div className={styles.statusDot} />}
+      {isLive && <div className={styles.liveDot} />}
     </div>
-    <div className="space-y-1.5 mb-6">
-      <p className="text-[10px] text-gray-400 italic">
-        Last Run:{" "}
-        <span className="text-gray-600 not-italic font-medium">{lastRun}</span>
-      </p>
-      <p className="text-[10px] text-gray-400 italic">
-        Success:{" "}
-        <span className="text-gray-600 not-italic font-medium">{success}</span>
-      </p>
-      <p className="text-[10px] text-gray-400 italic">
-        Latest:{" "}
-        <span className="text-gray-600 not-italic font-medium">{price}</span>
-      </p>
-    </div>
-    <div className="flex gap-2">
-      <button className={styles.primaryBtn}>Trigger</button>
-      <button className={styles.secondaryBtn}>Logs</button>
-    </div>
+    <div className="text-2xl font-black text-gray-800 uppercase">{value}</div>
   </div>
 );
+
+// --- COMPONENT TABLEROW ---
+const TableRow = ({ id, data, staleData, onRefresh }) => {
+  const [isTriggering, setIsTriggering] = useState(false); // Trạng thái loading riêng của từng nút
+
+  const category = id.split("_")[0].toLowerCase();
+  const subCategory = id.split("_")[1];
+
+  const getCategoryStyle = (cat) => {
+    switch (cat) {
+      case "gold":
+        return styles.tagGold;
+      case "silver":
+        return styles.tagSilver;
+      case "forex":
+        return styles.tagForex;
+      default:
+        return styles.categoryBadge;
+    }
+  };
+
+  let isStale = false;
+  if (staleData) {
+    const info = staleData[category];
+    isStale = typeof info === "object" ? info[subCategory] : info;
+  }
+
+  // Hàm xử lý Trigger API POST
+  const handleTriggerJob = async () => {
+    setIsTriggering(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      // Quy đổi id: "gold_vn_latest" -> "/jobs/gold/vn/latest"
+      const endpoint = `http://localhost:8080/ingest/jobs/${id.replace(/_/g, "/")}`;
+
+      await axios.post(
+        endpoint,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      // Thành công -> Làm mới toàn bộ bảng để cập nhật status và thời gian mới nhất
+      onRefresh();
+    } catch (error) {
+      console.error(`Failed to trigger job ${id}:`, error);
+      alert(
+        `Lỗi khi kích hoạt ${id.toUpperCase()}. Xem console để biết thêm chi tiết.`,
+      );
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
+  return (
+    <tr className="hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0">
+      <td className="px-6 py-4 font-bold text-gray-700 text-xs">
+        {id.replace(/_/g, " ").toUpperCase()}
+      </td>
+      <td className="px-6 py-4">
+        <span
+          className={`${styles.categoryBadge} ${getCategoryStyle(category)}`}
+        >
+          {category.toUpperCase()}
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <span className={`${styles.statusText} ${styles[data.status]}`}>
+          {" "}
+          ● {data.status?.toUpperCase()}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-[10px] text-gray-400 font-mono">
+        {data.timestamp ? new Date(data.timestamp).toLocaleString() : "---"}
+      </td>
+      <td className="px-6 py-4">
+        <span
+          className={
+            isStale
+              ? "text-red-500 font-bold text-[10px]"
+              : "text-green-500 font-bold text-[10px]"
+          }
+        >
+          {isStale ? " STALE" : "✓ FRESH"}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-center">
+        {/* NÚT TRIGGER MỚI */}
+        <button
+          onClick={handleTriggerJob}
+          disabled={isTriggering}
+          className={styles.triggerBtn}
+          title="Run Job Now"
+        >
+          {isTriggering ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Play size={16} />
+          )}
+        </button>
+      </td>
+    </tr>
+  );
+};
 
 export default AdminDashboard;

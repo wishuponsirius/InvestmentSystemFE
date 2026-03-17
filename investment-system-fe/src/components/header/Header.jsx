@@ -1,18 +1,95 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "./Header.module.css";
 
 const Header = ({ role = "GUEST" }) => {
   const navigate = useNavigate();
-  const location = useLocation(); // Dùng để check xem trang nào đang active
+  const location = useLocation();
 
-  // Cấu hình menu cho từng Role
+  // Normalize incoming role: accept lower/upper case and synonyms
+  const incomingRole = role || "GUEST";
+  const roleUpper = String(incomingRole).toUpperCase();
+  // Map synonyms: treat INVESTOR same as INSTITUTION
+  const mappedRole = roleUpper === "INVESTOR" ? "INSTITUTION" : roleUpper;
+
+  // State quản lý việc mở/đóng dropdown
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const dropdownRef = useRef(null);
+
+  // Lấy tên hiển thị (username) và avatar từ localStorage để hiển thị bên cạnh avatar
+  useEffect(() => {
+    const updateFromStorage = () => {
+      const cachedName = localStorage.getItem("displayName");
+      const cachedAvatar = localStorage.getItem("avatarUrl");
+
+      if (cachedName) {
+        setUserName(cachedName);
+      } else {
+        // Nếu chưa có tên trong localStorage, mua nó từ accessToken
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+          try {
+            const parts = token.split(".");
+            if (parts.length === 3) {
+              const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+              const padded = base64 + "===".slice((base64.length + 3) % 4);
+              const payload = JSON.parse(atob(padded));
+
+              const name =
+                payload?.username ||
+                payload?.preferred_username ||
+                payload?.orgName ||
+                payload?.name ||
+                payload?.email ||
+                payload?.sub;
+
+              const finalName = name || "";
+              setUserName(finalName);
+              if (finalName) localStorage.setItem("displayName", finalName);
+            }
+          } catch (e) {
+            console.error("Failed to decode access token:", e);
+          }
+        } else {
+          setUserName("");
+        }
+      }
+
+      setAvatarUrl(cachedAvatar || "");
+    };
+
+    updateFromStorage();
+
+    window.addEventListener("storage", updateFromStorage);
+    window.addEventListener("avatarUpdated", updateFromStorage);
+    window.addEventListener("authChanged", updateFromStorage);
+
+    return () => {
+      window.removeEventListener("storage", updateFromStorage);
+      window.removeEventListener("avatarUpdated", updateFromStorage);
+      window.removeEventListener("authChanged", updateFromStorage);
+    };
+  }, []);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const menuConfig = {
     GUEST: [
       { name: "Market Data", path: "/guest-dashboard" },
       { name: "About Us", path: "/about" },
     ],
-    INVESTOR: [
+    INSTITUTION: [
       { name: "Market Data", path: "/investor-dashboard" },
       { name: "Portfolio", path: "/portfolio" },
       { name: "Analytics", path: "/analytics" },
@@ -25,7 +102,29 @@ const Header = ({ role = "GUEST" }) => {
     ],
   };
 
-  const currentMenu = menuConfig[role] || menuConfig.GUEST;
+  const currentMenu = menuConfig[mappedRole] || menuConfig.GUEST;
+
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+
+    // Xóa toàn bộ token và thông tin người dùng khỏi localStorage để thực sự đăng xuất
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("displayName");
+    localStorage.removeItem("avatarUrl");
+
+    // Thông báo cho các component khác biết rằng trạng thái auth đã thay đổi
+    window.dispatchEvent(new Event("authChanged"));
+
+    // Đẩy người dùng về trang đăng nhập
+    navigate("/login");
+  };
+
+  const handleProfileSettings = () => {
+    setIsDropdownOpen(false);
+    // Điều hướng tới trang User Profile mà chúng ta vừa tạo
+    navigate("/user-profile");
+  };
 
   return (
     <header className={styles.headerContainer}>
@@ -43,7 +142,7 @@ const Header = ({ role = "GUEST" }) => {
           <span className={styles.logoText}>GoldInsight</span>
         </div>
 
-        {/* Navigation - Thay đổi linh hoạt theo Role */}
+        {/* Navigation */}
         <nav className={styles.navLinks}>
           {currentMenu.map((item, index) => (
             <span
@@ -61,7 +160,7 @@ const Header = ({ role = "GUEST" }) => {
 
       {/* Right Section: User Profile hoặc Login Button */}
       <div className="flex items-center gap-4">
-        {role === "GUEST" ? (
+        {mappedRole === "GUEST" ? (
           <button
             className={styles.loginBtn}
             onClick={() => navigate("/login")}
@@ -69,13 +168,38 @@ const Header = ({ role = "GUEST" }) => {
             Login
           </button>
         ) : (
-          <div className={styles.userProfile}>
+          <div
+            className={styles.userProfile}
+            ref={dropdownRef}
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            <span className={styles.welcomeText}>
+              Welcome{userName ? `, ${userName}` : ""}
+            </span>
             <img
-              src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
+              src={avatarUrl || "https://i.pravatar.cc/150?u=a042581f4e29026704d"}
               alt="User Avatar"
               className={styles.avatar}
             />
             <span className={styles.statusDot} title="Online"></span>
+
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className={styles.dropdownMenu}>
+                <div
+                  className={styles.dropdownItem}
+                  onClick={handleProfileSettings}
+                >
+                  Profile Settings
+                </div>
+                <div
+                  className={`${styles.dropdownItem} ${styles.dropdownItemLogout}`}
+                  onClick={handleLogout}
+                >
+                  Log out
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
