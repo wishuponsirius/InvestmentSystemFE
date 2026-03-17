@@ -414,9 +414,9 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
               <p className="pointer-events-none absolute right-3 bottom-3 z-10 text-xs text-gray-500">
                 {selectedPriceType === "domestic"
                   ? activeTab === "GOLD"
-                    ? "Đơn vị: Triệu/Lượng"
-                    : "Đơn vị: Triệu/Kg"
-                  : "Đơn vị: Triệu/Ounce"}
+                    ? "Unit: M/Lượng"
+                    : "Unit: M/Kg"
+                  : "Unit: M/Ounce"}
               </p>
             )}
             {isLoading ? (
