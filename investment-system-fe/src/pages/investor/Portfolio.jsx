@@ -12,6 +12,8 @@ import {
   formatMoney,
   savePortfolioAsset,
 } from "../../services/portfolioService";
+import PortfolioAnalytics from "../../components/portfolio/PortfolioAnalytics";
+
 
 const Portfolio = () => {
   const [isLoading, setIsLoading] = React.useState(true);
@@ -342,6 +344,9 @@ const Portfolio = () => {
             </form>
           </div>
         )}
+
+        {/* Analytics section embedded below holdings */}
+        <PortfolioAnalytics />
       </main>
 
       <Footer />
