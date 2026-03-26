@@ -7,9 +7,31 @@ const backendApi = axios.create({
   timeout: 20000,
 });
 
+const TROY_OUNCE_GRAMS = 31.1034768;
+const GOLD_LUONG_GRAMS = 37.5;
+const OUNCES_PER_LUONG = GOLD_LUONG_GRAMS / TROY_OUNCE_GRAMS;
+const OUNCES_PER_KG = 1000 / TROY_OUNCE_GRAMS;
+const RANGE_REQUEST_MAP = {
+  "6m": "1y",
+};
+
 let lastInternational = null;
 let lastExchangeRate = 24000;
-let lastSilverNormalizeFactor = 1;
+
+const ASSET_META = {
+  gold: {
+    localLabel: "SJC Gold",
+    localUnit: "Luong",
+    globalUnit: "Ounce",
+    worldToLocalFactor: OUNCES_PER_LUONG,
+  },
+  silver: {
+    localLabel: "Phu Quy Silver",
+    localUnit: "Kg",
+    globalUnit: "Ounce",
+    worldToLocalFactor: OUNCES_PER_KG,
+  },
+};
 
 const toNumber = (value) => {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -54,10 +76,21 @@ const tryBackendGet = async (path) => {
   }
 };
 
+const tryBackendGetMany = async (paths) => {
+  let lastError = null;
+
+  for (const path of paths) {
+    const result = await tryBackendGet(path);
+    if (result.ok) return result;
+    lastError = result.error;
+  }
+
+  return { ok: false, error: lastError, data: null };
+};
+
 const fetchPremium = async () => {
   const res = await tryBackendGet("/prices/premium");
   if (!res.ok) return [];
-
   return res.data || [];
 };
 
@@ -76,189 +109,175 @@ const normalizeDomesticGoldVnd = (value) => {
   return normalized;
 };
 
-const inferSilverNormalizeFactor = (domesticValue, worldSilverVnd) => {
-  if (domesticValue <= 0 || worldSilverVnd <= 0) return 1;
-
-  const candidates = [1, 10, 31.1035, 32.1507, 37.5, 100, 1000];
-  let bestFactor = 1;
-  let bestDiff = Number.POSITIVE_INFINITY;
-
-  for (const factor of candidates) {
-    const normalized = domesticValue / factor;
-    const diff = Math.abs(normalized - worldSilverVnd);
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestFactor = factor;
-    }
-  }
-
-  return bestFactor;
+const normalizeDomesticValue = (asset, value) => {
+  if (asset === "gold") return normalizeDomesticGoldVnd(value);
+  return value;
 };
 
-const mapBackendGoldProducts = (latestRow) => {
+const convertUsdPerOunceToLocalVnd = (asset, usdPerOunce, usdToVnd) => {
+  const meta = ASSET_META[asset];
+  if (!meta || usdPerOunce <= 0 || usdToVnd <= 0) return 0;
+  return usdPerOunce * usdToVnd * meta.worldToLocalFactor;
+};
+
+const convertLocalVndToUsdPerOunce = (asset, localVnd, usdToVnd) => {
+  const meta = ASSET_META[asset];
+  if (!meta || localVnd <= 0 || usdToVnd <= 0) return 0;
+  return localVnd / usdToVnd / meta.worldToLocalFactor;
+};
+
+const mapBackendProduct = (asset, latestRow) => {
   if (!latestRow) return [];
 
-  const buy = normalizeDomesticGoldVnd(
-    toNumber(latestRow?.buyPrice ?? latestRow?.buy),
-  );
-  const sell = normalizeDomesticGoldVnd(
-    toNumber(latestRow?.sellPrice ?? latestRow?.sell),
-  );
+  const buy = normalizeDomesticValue(asset, toNumber(latestRow?.buyPrice ?? latestRow?.buy));
+  const sell = normalizeDomesticValue(asset, toNumber(latestRow?.sellPrice ?? latestRow?.sell));
   if (buy <= 0 || sell <= 0) return [];
 
-  return [
-    {
-      provider: "VN",
-      type: "Giá Vàng SJC",
-      buy,
-      sell,
-      spread: Math.max(0, sell - buy),
-      updated: latestRow?.timestamp || latestRow?.updateDate || "",
-      category: "gold",
-    },
-    {
-      provider: "VN",
-      type: "Nhẫn Tròn Trơn 9999",
-      buy: Math.max(0, buy - 2100000),
-      sell: Math.max(0, sell - 2300000),
-      spread: Math.max(0, (sell - 2300000) - (buy - 2100000)),
-      updated: latestRow?.timestamp || latestRow?.updateDate || "",
-      category: "gold",
-    },
-    {
-      provider: "VN",
-      type: "Vàng Nữ Trang 24K",
-      buy: Math.max(0, buy - 2500000),
-      sell: Math.max(0, sell - 2600000),
-      spread: Math.max(0, (sell - 2600000) - (buy - 2500000)),
-      updated: latestRow?.timestamp || latestRow?.updateDate || "",
-      category: "gold",
-    },
-    {
-      provider: "VN",
-      type: "Vàng Miếng PNJ",
-      buy: Math.max(0, buy - 100000),
-      sell: Math.max(0, sell - 150000),
-      spread: Math.max(0, (sell - 150000) - (buy - 100000)),
-      updated: latestRow?.timestamp || latestRow?.updateDate || "",
-      category: "gold",
-    },
-    {
-      provider: "VN",
-      type: "Vàng DOJI AV",
-      buy,
-      sell: Math.max(0, sell - 50000),
-      spread: Math.max(0, (sell - 50000) - buy),
-      updated: latestRow?.timestamp || latestRow?.updateDate || "",
-      category: "gold",
-    },
-  ];
-};
-
-const mapBackendSilverProducts = (latestRow, normalizeFactor = 1) => {
-  if (!latestRow) return [];
-
-  const baseBuy = toNumber(latestRow?.buyPrice ?? latestRow?.buy);
-  const baseSell = toNumber(latestRow?.sellPrice ?? latestRow?.sell);
-  if (baseBuy <= 0 || baseSell <= 0) return [];
-
+  const meta = ASSET_META[asset];
   const updated = latestRow?.timestamp || latestRow?.updateDate || "";
 
   return [
     {
       provider: "VN",
-      type: "Bạc Nguyên Chất 99.99%",
-      buy: baseBuy,
-      sell: baseSell,
-      spread: Math.max(0, baseSell - baseBuy),
+      type: meta.localLabel,
+      buy,
+      sell,
+      spread: Math.max(0, sell - buy),
       updated,
-      category: "silver",
-    },
-    {
-      provider: "VN",
-      type: "Bạc Trang Sức 925",
-      buy: baseBuy - 150000,
-      sell: baseSell - 200000,
-      spread: Math.max(0, (baseSell - 200000) - (baseBuy - 150000)),
-      updated,
-      category: "silver",
-    },
-    {
-      provider: "VN",
-      type: "Bạc Ý Cao Cấp",
-      buy: baseBuy + 50000,
-      sell: baseSell + 50000,
-      spread: Math.max(0, (baseSell + 50000) - (baseBuy + 50000)),
-      updated,
-      category: "silver",
+      category: asset,
+      localUnit: meta.localUnit,
+      worldUnit: meta.globalUnit,
     },
   ];
 };
 
-const alignSeries = ({ asset, vnRows, globalRows, currencyRows, usdToVnd, silverNormalizeFactor = 1 }) => {
+const trimSeriesToRange = (series, range) => {
+  if (!Array.isArray(series) || !series.length || range !== "6m") return series;
+
+  const lastAt = series[series.length - 1]?.at;
+  if (!(lastAt instanceof Date) || Number.isNaN(lastAt.getTime())) return series;
+
+  const cutoff = new Date(lastAt);
+  cutoff.setMonth(cutoff.getMonth() - 6);
+  const trimmed = series.filter((item) => item?.at instanceof Date && item.at >= cutoff);
+  return trimmed.length ? trimmed : series;
+};
+
+const alignSeries = ({ asset, vnRows, globalRows, currencyRows, usdToVnd }) => {
   const historicalRates = {};
   const currencySeries = [];
 
   for (const item of currencyRows || []) {
     const key = getDateKey(item);
     if (!key) continue;
+
     const sell = toNumber(item?.sellPrice ?? item?.sell ?? item?.sell_price);
     if (sell <= 0) continue;
-    historicalRates[key] = sell;
-    currencySeries.push({ at: toDate(item?.timestamp || item?.updateDate || item?.update_date), value: sell });
-  }
-  currencySeries.sort((a, b) => a.at - b.at);
 
+    historicalRates[key] = sell;
+    currencySeries.push({
+      at: toDate(item?.timestamp || item?.updateDate || item?.update_date),
+      value: sell,
+    });
+  }
+
+  currencySeries.sort((a, b) => a.at - b.at);
   const aligned = {};
 
   for (const item of vnRows || []) {
     const key = getDateKey(item);
     if (!key) continue;
-    let sell = toNumber(item?.sellPrice ?? item?.sell ?? item?.sell_price);
-    if (asset === "gold") {
-      sell = normalizeDomesticGoldVnd(sell);
-    } 
-    if (sell <= 0) continue;
+
+    const domesticBuy = normalizeDomesticValue(
+      asset,
+      toNumber(item?.buyPrice ?? item?.buy ?? item?.buy_price),
+    );
+    const domesticSell = normalizeDomesticValue(
+      asset,
+      toNumber(item?.sellPrice ?? item?.sell ?? item?.sell_price),
+    );
+
+    if (domesticSell <= 0 && domesticBuy <= 0) continue;
+
     aligned[key] = {
       at: toDate(item?.timestamp || item?.updateDate || item?.update_date),
-      domesticSell: sell,
+      domesticBuy: domesticBuy > 0 ? domesticBuy : aligned[key]?.domesticBuy ?? null,
+      domesticSell: domesticSell > 0 ? domesticSell : aligned[key]?.domesticSell ?? null,
       worldUsd: aligned[key]?.worldUsd ?? null,
-      worldVnd: aligned[key]?.worldVnd ?? null,
+      worldBuyUsd: aligned[key]?.worldBuyUsd ?? null,
+      worldSellUsd: aligned[key]?.worldSellUsd ?? null,
     };
   }
 
   for (const item of globalRows || []) {
     const key = getDateKey(item);
     if (!key) continue;
-    const worldUsd = toNumber(item?.buyPrice ?? item?.buy ?? item?.price ?? item?.buy_price);
-    const worldBuyUsd = toNumber(item?.buyPrice ?? item?.buy ?? item?.buy_price);
+
+    const worldBuyUsd = toNumber(item?.buyPrice ?? item?.buy ?? item?.buy_price ?? item?.price);
     const worldSellUsd = toNumber(item?.sellPrice ?? item?.sell ?? item?.sell_price);
+    const worldUsd = worldSellUsd > 0 ? worldSellUsd : worldBuyUsd;
     if (worldUsd <= 0) continue;
 
-    const rate = historicalRates[key] || usdToVnd;
     aligned[key] = {
       at: aligned[key]?.at || toDate(item?.timestamp || item?.updateDate || item?.update_date),
+      domesticBuy: aligned[key]?.domesticBuy ?? null,
       domesticSell: aligned[key]?.domesticSell ?? null,
       worldUsd,
       worldBuyUsd: worldBuyUsd > 0 ? worldBuyUsd : aligned[key]?.worldBuyUsd ?? null,
       worldSellUsd: worldSellUsd > 0 ? worldSellUsd : aligned[key]?.worldSellUsd ?? null,
-      worldVnd: rate > 0 ? (worldUsd * rate) / 1000000 : null,
-      worldBuyVnd: rate > 0 && worldBuyUsd > 0 ? (worldBuyUsd * rate) / 1000000 : null,
-      worldSellVnd: rate > 0 && worldSellUsd > 0 ? (worldSellUsd * rate) / 1000000 : null,
     };
   }
 
-  const marketSeries = Object.values(aligned).sort((a, b) => a.at - b.at);
+  const marketSeries = Object.entries(aligned)
+    .map(([key, item]) => {
+      const rate = historicalRates[key] || usdToVnd;
+      const domesticSell = item.domesticSell ?? null;
+      const domesticBuy = item.domesticBuy ?? null;
+      const worldUsd = item.worldUsd ?? null;
+      const worldBuyUsd = item.worldBuyUsd ?? null;
+      const worldSellUsd = item.worldSellUsd ?? null;
+
+      return {
+        at: item.at,
+        exchangeRate: rate > 0 ? rate : null,
+        domesticBuy,
+        domesticSell,
+        domesticBuyUsd:
+          domesticBuy != null && rate > 0
+            ? convertLocalVndToUsdPerOunce(asset, domesticBuy, rate)
+            : null,
+        domesticSellUsd:
+          domesticSell != null && rate > 0
+            ? convertLocalVndToUsdPerOunce(asset, domesticSell, rate)
+            : null,
+        worldUsd,
+        worldBuyUsd,
+        worldSellUsd,
+        worldLocalVnd:
+          worldUsd != null && rate > 0 ? convertUsdPerOunceToLocalVnd(asset, worldUsd, rate) : null,
+        worldBuyLocalVnd:
+          worldBuyUsd != null && rate > 0
+            ? convertUsdPerOunceToLocalVnd(asset, worldBuyUsd, rate)
+            : null,
+        worldSellLocalVnd:
+          worldSellUsd != null && rate > 0
+            ? convertUsdPerOunceToLocalVnd(asset, worldSellUsd, rate)
+            : null,
+      };
+    })
+    .sort((a, b) => a.at - b.at);
+
   return { marketSeries, currencySeries };
 };
 
 const fetchBackendHistory = async (range) => {
+  const requestedRange = RANGE_REQUEST_MAP[range] || range;
   const [vnGold, globalGold, vnSilver, globalSilver, usd] = await Promise.all([
-    tryBackendGet(`/prices/vn-all/gold/${range}`),
-    tryBackendGet(`/prices/global/gold/${range}`),
-    tryBackendGet(`/prices/vn-all/silver/${range}`),
-    tryBackendGet(`/prices/global/silver/${range}`),
-    tryBackendGet(`/prices/USD/${range}`),
+    tryBackendGet(`/prices/vn-all/gold/${requestedRange}`),
+    tryBackendGet(`/prices/global/gold/${requestedRange}`),
+    tryBackendGet(`/prices/vn-all/silver/${requestedRange}`),
+    tryBackendGet(`/prices/global/silver/${requestedRange}`),
+    tryBackendGetMany([`/prices/USD/${requestedRange}`, `/prices/usd/${requestedRange}`]),
   ]);
 
   const hasAny = [vnGold, globalGold, vnSilver, globalSilver, usd].some((x) => x.ok);
@@ -285,16 +304,18 @@ export const fetchMarketInsights = async (range = "1m") => {
   const backendDomesticGold = await tryBackendGet("/prices/vn-all/gold/1d");
   const backendDomesticSilver = await tryBackendGet("/prices/vn-all/silver/1w");
   const premiumRows = await fetchPremium();
+
   for (const row of premiumRows) {
     if (row.assetId === 1) goldPremium = toNumber(row.premiumPrice);
     if (row.assetId === 2) silverPremium = toNumber(row.premiumPrice);
   }
 
   if (backendDomesticGold.ok) {
-    productsGold = mapBackendGoldProducts(pickLatest(backendDomesticGold.data));
+    productsGold = mapBackendProduct("gold", pickLatest(backendDomesticGold.data));
   }
+
   if (backendDomesticSilver.ok) {
-    productsSilver = mapBackendSilverProducts(pickLatest(backendDomesticSilver.data));
+    productsSilver = mapBackendProduct("silver", pickLatest(backendDomesticSilver.data));
   }
 
   const backendWorldGold = await tryBackendGet("/prices/global/gold/1d");
@@ -302,30 +323,23 @@ export const fetchMarketInsights = async (range = "1m") => {
 
   if (backendWorldGold.ok) {
     const latest = pickLatest(backendWorldGold.data);
-    worldGoldUsd = toNumber(latest?.buyPrice ?? latest?.buy);
+    worldGoldUsd = toNumber(latest?.sellPrice ?? latest?.sell ?? latest?.buyPrice ?? latest?.buy);
   }
+
   if (backendWorldSilver.ok) {
     const latest = pickLatest(backendWorldSilver.data);
-    worldSilverUsd = toNumber(latest?.buyPrice ?? latest?.buy);
+    worldSilverUsd = toNumber(latest?.sellPrice ?? latest?.sell ?? latest?.buyPrice ?? latest?.buy);
   }
 
   if (worldGoldUsd > 0 || worldSilverUsd > 0) {
     lastInternational = { worldGoldUsd, worldSilverUsd };
   }
 
-  const backendUsd = await tryBackendGet("/prices/usd/1w");
+  const backendUsd = await tryBackendGetMany(["/prices/usd/1w", "/prices/USD/1w"]);
   if (backendUsd.ok) {
     const latest = pickLatest(backendUsd.data);
     usdToVnd = toNumber(latest?.sellPrice ?? latest?.sell);
     if (usdToVnd > 0) lastExchangeRate = usdToVnd;
-  }
-
-  const currentWorldSilverVnd = usdToVnd > 0 ? worldSilverUsd * usdToVnd : 0;
-  if (backendDomesticSilver.ok) {
-    const latestSilver = pickLatest(backendDomesticSilver.data);
-    const rawSilverSell = toNumber(latestSilver?.sellPrice ?? latestSilver?.sell);
-    // lastSilverNormalizeFactor = inferSilverNormalizeFactor(rawSilverSell, currentWorldSilverVnd);
-    productsSilver = mapBackendSilverProducts(latestSilver, lastSilverNormalizeFactor);
   }
 
   const history = await fetchBackendHistory(range);
@@ -349,12 +363,11 @@ export const fetchMarketInsights = async (range = "1m") => {
       globalRows: history.globalSilverRows,
       currencyRows: history.usdRows,
       usdToVnd,
-      silverNormalizeFactor: lastSilverNormalizeFactor,
     });
 
-    goldSeries = goldAligned.marketSeries;
-    silverSeries = silverAligned.marketSeries;
-    currencySeries = goldAligned.currencySeries;
+    goldSeries = trimSeriesToRange(goldAligned.marketSeries, range);
+    silverSeries = trimSeriesToRange(silverAligned.marketSeries, range);
+    currencySeries = trimSeriesToRange(goldAligned.currencySeries, range);
   }
 
   return {
@@ -363,8 +376,8 @@ export const fetchMarketInsights = async (range = "1m") => {
     usdToVnd,
     worldGoldUsd,
     worldSilverUsd,
-    worldGoldVnd: usdToVnd > 0 ? worldGoldUsd * usdToVnd : 0,
-    worldSilverVnd: usdToVnd > 0 ? worldSilverUsd * usdToVnd : 0,
+    worldGoldVnd: convertUsdPerOunceToLocalVnd("gold", worldGoldUsd, usdToVnd),
+    worldSilverVnd: convertUsdPerOunceToLocalVnd("silver", worldSilverUsd, usdToVnd),
     goldSeries,
     silverSeries,
     currencySeries,
@@ -383,3 +396,12 @@ export const numberFmt = (value, digits = 0) =>
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(Number.isFinite(value) ? value : 0);
+
+export const marketUnitMeta = {
+  gold: ASSET_META.gold,
+  silver: ASSET_META.silver,
+  conversions: {
+    ouncesPerLuong: OUNCES_PER_LUONG,
+    ouncesPerKg: OUNCES_PER_KG,
+  },
+};
