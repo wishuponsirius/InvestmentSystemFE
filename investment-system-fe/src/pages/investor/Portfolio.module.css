@@ -175,3 +175,13 @@
 .usdCard:hover {
   box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
 }
+
+
+.pageTitle {
+  margin: 0 0 6px;
+  font-size: clamp(1.75rem, 2.6vw, 2.35rem);
+  line-height: 1.15;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: center;
+}

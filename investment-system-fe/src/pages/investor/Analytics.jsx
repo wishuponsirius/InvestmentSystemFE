@@ -58,7 +58,7 @@ const Analytics = () => {
         <div className={styles.titleRow}>
           <h1 className={styles.pageTitle}>Market Analytics</h1>
           <p className={styles.pageSubtitle}>
-            AI-powered predictions · Updated in real time
+            AI-powered predictions · Updated every hour
           </p>
         </div>
 

@@ -685,7 +685,7 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
 
         <section className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
           <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-900">
-            <div className="grid xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid grid-cols-1">
               <div className="border-b border-slate-200 px-6 py-6 xl:border-b-0 xl:border-r xl:px-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -777,27 +777,6 @@ const MarketInsightsPage = ({ styles, headerRole = "GUEST" }) => {
                 <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
                   <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5"><Globe2 className="h-3.5 w-3.5" />{activeTab === "FOREX" ? "FX chart uses current USD/VND series from BE history" : `Converted benchmark uses USD/VND and ${meta.unit.toLowerCase()} conversion`}</span>
                   {activeTab !== "FOREX" && <span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] ${riskTone(market.risk)}`}><Scale className="h-3.5 w-3.5" />{market.risk} premium risk</span>}
-                </div>
-              </div>
-
-              <div className="border-t border-slate-200 xl:border-t-0">
-                <div className="flex h-full flex-col px-5 py-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.22em] text-slate-500">News Feed</p>
-                      <h3 className="mt-1 text-xl font-semibold text-slate-900">Market Follow-up</h3>
-                    </div>
-                    <Newspaper className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <div className="mt-5 space-y-4">
-                    {NEWS[activeTab].map(([title, age]) => (
-                      <article key={title} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm">
-                        <p className="text-sm font-semibold leading-6 text-slate-900">{title}</p>
-                        <p className="mt-2 text-xs text-slate-500">{age}</p>
-                      </article>
-                    ))}
-                  </div>
-                  <p className="mt-auto pt-4 text-xs leading-5 text-slate-500">Feed is mocked from FE until BE provides a dedicated market insight news source.</p>
                 </div>
               </div>
             </div>
