@@ -3,54 +3,229 @@ import { fetchMarketInsights } from "../services/marketInsightsService";
 
 const getDelta = (series) => {
   if (!Array.isArray(series) || series.length < 2) return 0;
-  const prev = Number(series[series.length - 2] || 0);
-  const curr = Number(series[series.length - 1] || 0);
+
+  const numeric = series.filter((value) => Number.isFinite(value));
+  if (numeric.length < 2) return 0;
+
+  const prev = Number(numeric[numeric.length - 2] || 0);
+  const curr = Number(numeric[numeric.length - 1] || 0);
   if (!prev) return 0;
+
   return ((curr - prev) / prev) * 100;
 };
 
-const toChartSeries = (alignedSeries, spread = 0) => {
-  const buy = [];
-  const sell = [];
-  const world = [];
-  const worldBuy = [];
-  const worldSell = [];
-  const dates = [];
+const lastFinite = (series, fallback = 0) => {
+  if (!Array.isArray(series)) return fallback;
 
-  let lastSell = null;
-  let lastWorld = null;
-  let lastWorldBuy = null;
-  let lastWorldSell = null;
-
-  for (const item of alignedSeries || []) {
-
-    dates.push(item?.at ?? null);
-    
-    if (Number.isFinite(item?.domesticSell) && item.domesticSell > 0) {
-      lastSell = item.domesticSell / 1000000;
-    }
-
-    if (Number.isFinite(item?.worldVnd) && item.worldVnd > 0) {
-      lastWorld = item.worldVnd;
-    }
-
-    if (Number.isFinite(item?.worldBuyVnd) && item.worldBuyVnd > 0) {
-      lastWorldBuy = item.worldBuyVnd;
-    }
-
-    if (Number.isFinite(item?.worldSellVnd) && item.worldSellVnd > 0) {
-      lastWorldSell = item.worldSellVnd;
-    }
-
-    sell.push(lastSell);
-    buy.push(lastSell != null ? lastSell - spread / 1000000 : null);
-
-    world.push(lastWorld);
-    worldBuy.push(lastWorldBuy);
-    worldSell.push(lastWorldSell);
+  for (let index = series.length - 1; index >= 0; index -= 1) {
+    if (Number.isFinite(series[index])) return series[index];
   }
 
-  return { buy, sell, world, worldBuy, worldSell, dates };
+  return fallback;
+};
+
+const calcCorrelation = (seriesA, seriesB) => {
+  const pairs = [];
+
+  for (let index = 0; index < Math.max(seriesA.length, seriesB.length); index += 1) {
+    const a = seriesA[index];
+    const b = seriesB[index];
+    if (Number.isFinite(a) && Number.isFinite(b)) {
+      pairs.push([a, b]);
+    }
+  }
+
+  if (pairs.length < 3) return 0;
+
+  const meanA = pairs.reduce((sum, [value]) => sum + value, 0) / pairs.length;
+  const meanB = pairs.reduce((sum, [, value]) => sum + value, 0) / pairs.length;
+
+  let numerator = 0;
+  let denomA = 0;
+  let denomB = 0;
+
+  for (const [a, b] of pairs) {
+    const diffA = a - meanA;
+    const diffB = b - meanB;
+    numerator += diffA * diffB;
+    denomA += diffA * diffA;
+    denomB += diffB * diffB;
+  }
+
+  const denominator = Math.sqrt(denomA * denomB);
+  if (!denominator) return 0;
+
+  return numerator / denominator;
+};
+
+const classifyRisk = (asset, premium) => {
+  if (asset === "gold") {
+    if (premium > 18000000) return "Extreme";
+    if (premium > 12000000) return "High";
+    if (premium > 5000000) return "Medium";
+    return "Low";
+  }
+
+  if (asset === "silver") {
+    if (premium > 8000000) return "High";
+    if (premium > 3000000) return "Medium";
+    return "Low";
+  }
+
+  return "Low";
+};
+
+const buildMetalSeries = (rows) => {
+  const dates = [];
+  const domesticBuyLocal = [];
+  const domesticSellLocal = [];
+  const domesticBuyUsd = [];
+  const domesticSellUsd = [];
+  const worldUsd = [];
+  const worldBuyUsd = [];
+  const worldSellUsd = [];
+  const worldLocal = [];
+  const worldBuyLocal = [];
+  const worldSellLocal = [];
+  const premium = [];
+  const exchangeRate = [];
+
+  for (const item of rows || []) {
+    dates.push(item?.at ?? null);
+    domesticBuyLocal.push(Number.isFinite(item?.domesticBuy) ? item.domesticBuy : null);
+    domesticSellLocal.push(Number.isFinite(item?.domesticSell) ? item.domesticSell : null);
+    domesticBuyUsd.push(Number.isFinite(item?.domesticBuyUsd) ? item.domesticBuyUsd : null);
+    domesticSellUsd.push(Number.isFinite(item?.domesticSellUsd) ? item.domesticSellUsd : null);
+    worldUsd.push(Number.isFinite(item?.worldUsd) ? item.worldUsd : null);
+    worldBuyUsd.push(Number.isFinite(item?.worldBuyUsd) ? item.worldBuyUsd : null);
+    worldSellUsd.push(Number.isFinite(item?.worldSellUsd) ? item.worldSellUsd : null);
+    worldLocal.push(Number.isFinite(item?.worldLocalVnd) ? item.worldLocalVnd : null);
+    worldBuyLocal.push(Number.isFinite(item?.worldBuyLocalVnd) ? item.worldBuyLocalVnd : null);
+    worldSellLocal.push(Number.isFinite(item?.worldSellLocalVnd) ? item.worldSellLocalVnd : null);
+    exchangeRate.push(Number.isFinite(item?.exchangeRate) ? item.exchangeRate : null);
+
+    if (Number.isFinite(item?.domesticSell) && Number.isFinite(item?.worldLocalVnd)) {
+      premium.push(item.domesticSell - item.worldLocalVnd);
+    } else {
+      premium.push(null);
+    }
+  }
+
+  return {
+    dates,
+    domesticBuyLocal,
+    domesticSellLocal,
+    domesticBuyUsd,
+    domesticSellUsd,
+    worldUsd,
+    worldBuyUsd,
+    worldSellUsd,
+    worldLocal,
+    worldBuyLocal,
+    worldSellLocal,
+    premium,
+    exchangeRate,
+  };
+};
+
+const buildForexSeries = (rows) => {
+  const dates = [];
+  const values = [];
+  const momentum = [];
+
+  for (const item of rows || []) {
+    const value = Number.isFinite(item?.value) ? item.value : null;
+    dates.push(item?.at ?? null);
+    values.push(value);
+  }
+
+  values.forEach((value, index) => {
+    const prev = index > 0 ? values[index - 1] : null;
+    if (Number.isFinite(value) && Number.isFinite(prev) && prev !== 0) {
+      momentum.push(((value - prev) / prev) * 100);
+    } else {
+      momentum.push(0);
+    }
+  });
+
+  return { dates, values, momentum };
+};
+
+const buildMetalMarket = ({
+  key,
+  product,
+  products,
+  rows,
+  latestWorldUsd,
+  latestWorldLocal,
+  latestPremium,
+  usdToVnd,
+}) => {
+  const series = buildMetalSeries(rows);
+  const premiumLatest = lastFinite(series.premium, latestPremium);
+
+  return {
+    key,
+    product,
+    products,
+    latestDomesticBuy: product?.buy || 0,
+    latestDomesticSell: product?.sell || 0,
+    latestWorldUsd: Number(latestWorldUsd || 0),
+    latestWorldLocal: Number(latestWorldLocal || 0),
+    latestPremium: premiumLatest,
+    latestExchangeRate: Number(usdToVnd || 0),
+    domesticChangeLocal: getDelta(series.domesticSellLocal),
+    domesticChangeUsd: getDelta(series.domesticSellUsd),
+    worldChangeLocal: getDelta(series.worldLocal),
+    worldChangeUsd: getDelta(series.worldUsd),
+    premiumChange: getDelta(series.premium),
+    correlation: calcCorrelation(series.domesticSellLocal, series.worldLocal),
+    risk: classifyRisk(key, premiumLatest),
+    series,
+  };
+};
+
+const buildForexMarket = (rows, usdToVnd) => {
+  const series = buildForexSeries(rows);
+  const latestRate = lastFinite(series.values, usdToVnd);
+
+  return {
+    key: "forex",
+    product: {
+      provider: "VN",
+      type: "USD / VND",
+      buy: latestRate,
+      sell: latestRate,
+      spread: 0,
+      localUnit: "Currency Unit",
+      worldUnit: "Currency Unit",
+    },
+    products: [
+      {
+        provider: "VN",
+        type: "USD / VND",
+        buy: latestRate,
+        sell: latestRate,
+        spread: 0,
+        localUnit: "Currency Unit",
+        worldUnit: "Currency Unit",
+      },
+    ],
+    latestDomesticBuy: latestRate,
+    latestDomesticSell: latestRate,
+    latestWorldUsd: 1,
+    latestWorldLocal: latestRate,
+    latestPremium: 0,
+    latestExchangeRate: latestRate,
+    domesticChangeLocal: getDelta(series.values),
+    domesticChangeUsd: getDelta(series.values),
+    worldChangeLocal: getDelta(series.values),
+    worldChangeUsd: getDelta(series.values),
+    premiumChange: getDelta(series.momentum),
+    correlation: 1,
+    risk: "Low",
+    series,
+  };
 };
 
 export const useMarketInsights = () => {
@@ -83,63 +258,34 @@ export const useMarketInsights = () => {
     const productsGold = data?.productsGold || [];
     const productsSilver = data?.productsSilver || [];
 
-    const sjc =
-      productsGold.find((x) => String(x.type).toUpperCase().includes("SJC")) || productsGold[0] || null;
-    const silverBase = productsSilver[0] || null;
-
-    const goldSpread = sjc ? Math.max(0, sjc.sell - sjc.buy) : 0;
-    const silverSpread = silverBase ? Math.max(0, silverBase.sell - silverBase.buy) : 0;
-
-    const goldSeries = toChartSeries(data?.goldSeries || [], goldSpread);
-    const silverSeries = toChartSeries(data?.silverSeries || [], silverSpread);
-    const currencySeries = (data?.currencySeries || []).map((x) => Number(x?.value || 0));
-
-    const goldDomesticChange = getDelta(goldSeries.sell);
-    const goldWorldChange = getDelta(goldSeries.world);
-    const silverDomesticChange = getDelta(silverSeries.sell);
-    const silverWorldChange = getDelta(silverSeries.world);
-    const currencyChange = getDelta(currencySeries);
-
-    const worldGoldVnd = Number(data?.worldGoldVnd || 0);
-    const worldSilverVnd = Number(data?.worldSilverVnd || 0);
-
-    const goldSpreadGap = Number(data?.goldPremium || 0);
-    // NEW 2026 Thresholds for Gold (VND/lượng)
-    const goldRisk = 
-      goldSpreadGap > 18000000 ? "Extreme" : // Above 18M: Bubble territory
-      goldSpreadGap > 12000000 ? "High" :    // 12M - 18M: High scarcity/intervention risk
-      goldSpreadGap > 5000000  ? "Medium" :  // 5M - 12M: Standard market premium
-      "Low";                                 // Below 5M: Very stable (rare in 2026)
-
-    const silverSpreadGap = Number(data?.silverPremium || 0);
-    // NEW 2026 Thresholds for Silver (VND/kg)
-    const silverRisk = 
-      silverSpreadGap > 8000000 ? "High" :   // High speculative gap
-      silverSpreadGap > 3000000 ? "Medium" : // Healthy industrial/investment demand
-      "Low";
+    const goldProduct = productsGold[0] || null;
+    const silverProduct = productsSilver[0] || null;
+    const usdToVnd = Number(data?.usdToVnd || 0);
 
     return {
-      sjc,
-      silverBase,
-      productsGold,
-      productsSilver,
-      usdToVnd: Number(data?.usdToVnd || 0),
-      worldGoldUsd: Number(data?.worldGoldUsd || 0),
-      worldSilverUsd: Number(data?.worldSilverUsd || 0),
-      worldGoldVnd,
-      worldSilverVnd,
-      goldSeries,
-      silverSeries,
-      currencySeries,
-      goldDomesticChange,
-      goldWorldChange,
-      silverDomesticChange,
-      silverWorldChange,
-      currencyChange,
-      goldSpreadGap,
-      silverSpreadGap,
-      goldRisk,
-      silverRisk,
+      usdToVnd,
+      apiErrors: data?.apiErrors || {},
+      goldMarket: buildMetalMarket({
+        key: "gold",
+        product: goldProduct,
+        products: productsGold,
+        rows: data?.goldSeries || [],
+        latestWorldUsd: data?.worldGoldUsd || 0,
+        latestWorldLocal: data?.worldGoldVnd || 0,
+        latestPremium: data?.goldPremium || 0,
+        usdToVnd,
+      }),
+      silverMarket: buildMetalMarket({
+        key: "silver",
+        product: silverProduct,
+        products: productsSilver,
+        rows: data?.silverSeries || [],
+        latestWorldUsd: data?.worldSilverUsd || 0,
+        latestWorldLocal: data?.worldSilverVnd || 0,
+        latestPremium: data?.silverPremium || 0,
+        usdToVnd,
+      }),
+      forexMarket: buildForexMarket(data?.currencySeries || [], usdToVnd),
     };
   }, [data]);
 
