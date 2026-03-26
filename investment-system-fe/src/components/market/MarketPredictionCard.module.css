@@ -1,0 +1,255 @@
+/* MarketPredictionCard.module.css */
+
+.card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #E5E7EB;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.card:hover {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  transform: translateY(-2px);
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 18px;
+  background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.assetInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.assetIcon {
+  font-size: 28px;
+  color: #ffffff;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.assetName {
+  font-family: 'Inter', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.assetSymbol {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.headerBadges {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Prediction badge ── */
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+
+.badgeUp {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+}
+
+.badgeDown {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+}
+
+.badgeArrow {
+  font-size: 13px;
+}
+
+.badgeTimeframe {
+  opacity: 0.8;
+  margin-left: 3px;
+}
+
+/* ── Confidence meters ── */
+.confidenceRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 24px 24px 16px;
+  background: var(--accent-light);
+}
+
+.confidenceItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.arc {
+  display: block;
+}
+
+.confidenceLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.divider {
+  width: 1px;
+  height: 64px;
+  background: #D1D5DB;
+  margin: 0 8px;
+}
+
+/* ── Reasoning ── */
+.reasoning {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.reasoningLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
+.reasoningText {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #374151;
+  margin: 0;
+}
+
+/* ── News ── */
+.newsSection {
+  padding: 16px 24px 22px;
+}
+
+.newsLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin: 0 0 12px;
+}
+
+.newsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.newsItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.newsIndex {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.newsText {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #4B5563;
+}
+
+/* ── Loading shimmer ── */
+.shimmer {
+  height: 320px;
+  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 20px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Error state ── */
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 12px;
+}
+
+.errorIcon {
+  font-size: 28px;
+  color: #EF4444;
+}
+
+.errorText {
+  font-size: 13px;
+  color: #6B7280;
+  text-align: center;
+  margin: 0;
+}
+
+.timestamp {
+  padding: 10px 24px;
+  font-size: 11px;
+  color: #9CA3AF;
+  border-top: 1px solid #F3F4F6;
+  text-align: right;
+  letter-spacing: 0.02em;
+}

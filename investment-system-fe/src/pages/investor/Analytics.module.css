@@ -1,72 +1,52 @@
-@reference "../../index.css";
+/* Analytics.module.css */
 
 .pageWrapper {
-  @apply min-h-screen w-full bg-[#FAFAFA] flex flex-col;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
 }
 
 .container {
-  @apply w-full max-w-7xl mx-auto px-6 py-10 flex-grow;
+  flex: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+  width: 100%;
+}
+
+.titleRow {
+  margin-bottom: 36px;
 }
 
 .pageTitle {
-  @apply text-xl font-bold text-gray-800 mb-10 text-center;
+  font-family: 'Inter', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
 }
 
-/* ===== Sections ===== */
-.section {
-  @apply bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-10;
+.pageSubtitle {
+  font-size: 13.5px;
+  color: #9CA3AF;
+  margin: 0;
+  letter-spacing: 0.02em;
 }
 
-.sectionTitle {
-  @apply text-base font-bold text-gray-800 mb-6;
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
 }
 
-.chartBox {
-  @apply w-full h-64 bg-gray-50 rounded-lg border border-dashed border-gray-200
-         flex items-center justify-center;
-}
+@media (max-width: 600px) {
+  .cardsGrid {
+    grid-template-columns: 1fr;
+  }
 
-.chartPlaceholder {
-  @apply text-sm text-gray-400 italic;
+  .container {
+    padding: 32px 16px 48px;
+  }
 }
-
-/* ===== Grid ===== */
-.gridTwoCols {
-  @apply grid grid-cols-1 md:grid-cols-2 gap-8 mb-10;
-}
-
-/* ===== Simulation ===== */
-.simulationGrid {
-  @apply grid grid-cols-1 md:grid-cols-4 gap-6 mb-8;
-}
-
-.formGroup {
-  @apply flex flex-col gap-2;
-}
-
-.formGroup label {
-  @apply text-sm text-gray-500 font-medium;
-}
-
-.formGroup input,
-.formGroup select {
-  @apply px-4 py-2 border border-gray-200 rounded-lg text-sm;
-}
-
-.runBtn {
-  @apply bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-lg
-         transition-all active:scale-95 mt-6 md:mt-0;
-}
-
-.simulationResult {
-  @apply bg-[#FFF9EB] rounded-xl p-6 text-center;
-}
-
-.simulationResult p {
-  @apply text-sm text-gray-600 mb-2;
-}
-
-.profit {
-  @apply text-2xl font-bold text-green-600;
-}
-
